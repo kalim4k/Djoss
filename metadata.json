@@ -1,0 +1,6 @@
+{
+  "name": "Djoss",
+  "description": "Djoss — une mascotte IA au ton africain de l'Ouest, tantôt douce tantôt sauvage — analyse tes conversations WhatsApp et te dit cash si tu es friendzoné, si ton couple va bien, ou ce qui se passe dans ton groupe de potes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
