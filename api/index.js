@@ -401,135 +401,132 @@ Dans chaque rapport, tu dois imp\xE9rativement identifier et consacrer une secti
 `;
 async function genererRapport(conversation, module, ton, perspectiveUtilisateur, totalMessagesCount) {
   const isFriendzone = module === "friendzone";
+  const isCouple = module === "couple";
+  const isBestfriend = module === "bestfriend";
+  const isGroup = ["group", "family", "work", "other"].includes(module);
   const parsedChat = parseWhatsAppTxt(conversation);
   const totalMsgs = totalMessagesCount || parsedChat.messageCount || 1480;
   const formattedMsgs = totalMsgs.toLocaleString("fr-FR");
+  let moduleSpecificInstructions = "";
+  let verdictInstruction = "";
+  if (isFriendzone) {
+    moduleSpecificInstructions = `
+MODULE ACTIF : "Friendzone ou pas"
+- L'utilisateur qui pose la question est : "${perspectiveUtilisateur || "Utilisateur"}"
+- Tu dois t'adresser \xE0 cet utilisateur en "TU" et analyser la relation du POINT DE VUE de cette personne.
+- Focus principal : L'utilisateur est-il/elle dans la friendzone de l'autre personne ?
+
+GRILLE D'\xC9VALUATION FRIENDZONE (tu DOIS \xE9valuer ces 6 crit\xE8res m\xE9thodiquement avant de rendre ton verdict) :
+
+1. INITIATIVE DES MESSAGES : Qui relance syst\xE9matiquement la conversation ? Si l'utilisateur initie 60%+ des \xE9changes sans r\xE9ciprocit\xE9 \u2192 signal fort de friendzone.
+2. TEMPS DE R\xC9PONSE : L'un r\xE9pond en minutes tandis que l'autre met des heures ? Une asym\xE9trie flagrante indique un d\xE9s\xE9quilibre d'int\xE9r\xEAt.
+3. LONGUEUR & INVESTISSEMENT DES MESSAGES : L'un envoie des pav\xE9s d\xE9taill\xE9s et l'autre r\xE9pond en 2 mots ? Qui investit le plus d'\xE9nergie dans les \xE9changes ?
+4. TERMES AFFECTIFS & POSITIONNEMENT : Usage de mots comme "fr\xE8re", "pote", "bestie", "mon gars" (= friendzone) vs. "b\xE9b\xE9", "c\u0153ur", emojis \u2764\uFE0F, flirt explicite (= int\xE9r\xEAt romantique) ?
+5. DISPONIBILIT\xC9 & RENDEZ-VOUS : L'un esquive les propositions de rencontre en t\xEAte-\xE0-t\xEAte, les reporte syst\xE9matiquement, ou propose toujours de venir en groupe ?
+6. SIGNAUX D'EXCLUSION ROMANTIQUE : Mention d'un(e) autre partenaire, confidences sur d'autres crushes, mise \xE0 distance corporelle explicite dans les messages ?
+
+R\xC8GLE DE VERDICT :
+- Si 4+ crit\xE8res sur 6 pointent clairement vers un d\xE9s\xE9quilibre affectif unilat\xE9ral \u2192 FRIENDZONE
+- Si les signaux montrent un int\xE9r\xEAt r\xE9ciproque ou que les indices sont ambigus \u2192 PAS FRIENDZONE
+- Tu DOIS citer les crit\xE8res qui t'ont convaincu dans ta section verdict_final.
+`;
+    verdictInstruction = '"FRIENDZONE" ou "PAS FRIENDZONE" (verdict cat\xE9gorique en majuscules)';
+  } else if (isCouple) {
+    moduleSpecificInstructions = `
+MODULE ACTIF : "Analyse de couple"
+- Perspective sym\xE9trique et neutre \u2014 ne suppose pas qui a import\xE9 la conversation.
+- Focus principal : Dynamique du rapport de force, patterns de communication, niveau d'attention r\xE9ciproque.
+- Analyse : Qui s'excuse le plus ? Qui initie les "je t'aime" ? Qui lance les disputes ? Qui fait la paix ?
+- Cherche les patterns de routine vs. passion, silence punitif, charge mentale in\xE9gale.
+`;
+    verdictInstruction = `Un verdict qualitatif cat\xE9gorique sur l'\xE9tat r\xE9el du couple (ex: "COUPLE EN PILOTE AUTOMATIQUE", "RELATION D\xC9S\xC9QUILIBR\xC9E", "COMPLICIT\xC9 SOLIDE MALGR\xC9 LES ORAGES")`;
+  } else if (isBestfriend) {
+    moduleSpecificInstructions = `
+MODULE ACTIF : "Meilleurs amis / Amiti\xE9"
+- Perspective sym\xE9trique et neutre.
+- Focus principal : Niveau de complicit\xE9, r\xE9ciprocit\xE9 dans l'amiti\xE9, authenticit\xE9.
+- Analyse : Qui confie ses probl\xE8mes \xE0 qui ? Qui est l\xE0 dans les moments durs ? Qui initie les plans ? Y a-t-il un "ami plus investi" que l'autre ?
+- NE CONFONDS PAS amiti\xE9 et flirt ! Si les messages montrent clairement une relation amicale (vannes, d\xE9lires, sujets du quotidien sans romantisme), analyse-les comme tels.
+`;
+    verdictInstruction = 'Un verdict qualitatif sur la qualit\xE9 r\xE9elle de cette amiti\xE9 (ex: "AMITI\xC9 EN B\xC9TON ARM\xC9", "AMITI\xC9 \xC0 SENS UNIQUE", "POTES DE SURFACE")';
+  } else if (isGroup) {
+    moduleSpecificInstructions = `
+MODULE ACTIF : "Groupe / Famille / Travail"
+- Perspective sym\xE9trique et neutre \u2014 un profil par participant.
+- Focus principal : Qui domine la conversation ? Qui est ignor\xE9 ? Alliances ? Dynamiques de moquerie ou d'exclusion ?
+- Analyse : Identifie les r\xF4les naturels de chacun (le leader, le clown, le fant\xF4me, le drama queen, l'inactif).
+- Chaque participant re\xE7oit un "jugement" personnalis\xE9 avec un titre de r\xF4le rigolo.
+`;
+    verdictInstruction = 'Un verdict global sur la dynamique du groupe (ex: "GROUPE VIVANT MAIS DOMIN\xC9 PAR UNE SEULE PERSONNE", "FAMILLE CONNECT\xC9E AVEC DES FANT\xD4MES DANS LES COINS")';
+  } else {
+    moduleSpecificInstructions = `
+MODULE ACTIF : "${module}"
+- Perspective sym\xE9trique et neutre.
+- Analyse la relation telle qu'elle se pr\xE9sente dans les messages.
+`;
+    verdictInstruction = "Un verdict qualitatif cat\xE9gorique sur la relation observ\xE9e";
+  }
   const userPrompt = `
 Voici les param\xE8tres d'analyse pour cette g\xE9n\xE9ration de rapport Djoss :
-- Module s\xE9lectionn\xE9 dans l'interface : "${module}"
-- Ton choisi par l'utilisateur : "${ton}" (HARDCORE ou SOFT)
-- NOMBRE EXACT DE MESSAGES IMPORT\xC9S ET COMPT\xC9S DANS LA DISCUSSION : ${totalMsgs} messages (${formattedMsgs} messages).
-${isFriendzone ? `- Identit\xE9 de l'utilisateur qui pose la question : "${perspectiveUtilisateur || "Utilisateur"}"` : "- Perspective : Sym\xE9trique et neutre. Ne suppose pas qui a import\xE9 la conversation."}
+- Module s\xE9lectionn\xE9 : "${module}"
+- Ton choisi : "${ton}" (${ton === "hardcore" ? "INSOLENCE MAXIMALE, punchlines incendiaires, zero piti\xE9" : "Grand fr\xE8re cash mais taquin, v\xE9rit\xE9 avec complicit\xE9"})
+- NOMBRE EXACT DE MESSAGES IMPORT\xC9S : ${totalMsgs} messages (${formattedMsgs} messages).
 
-R\xC8GLE ABSOLUE ET OBLIGATOIRE DE STYLE & TON DJOSS :
-1. **INSOLENCE & PUNCHLINES HARDCORE** : Djoss est ultra arrogant, provocateur, taquin et sans piti\xE9 ! Utilise une avalanche de punchlines dr\xF4les et piquantes.
-2. **ARGOT IVOIRIEN & CAMEROUNAIS OBLIGATOIRE** : Int\xE8gre naturellement des expressions du Nouchi et du Camfranglais dans toutes les phrases (*gb\xEA, goumin, drap, kpakpato, tchiza, m\xF4g\xF4, mbom, tu wanda, gbonhi, attacher, c'est g\xE2t\xE9, tu es dans la sauce, prends ton drap en douce...*) !
-3. **ADRESSE DIRECTE ("TU")** : Djoss s'adresse aux participants EN FACE-\xC0-FACE DIRECT en utilisant le TUTOIEMENT ("tu") et en les interpellant nomm\xE9ment par leur pr\xE9nom !
-Exemples :
-- "${perspectiveUtilisateur || "Pr\xE9nom 1"}, toi tu as fait ceci... tu envoies des pav\xE9s alors que la personne en face te donne du 'ok' !"
-- "Et toi [Pr\xE9nom 2], quant \xE0 toi tu r\xE9ponds cela... tu penses que tu es choco mais tu es dans le drap !"
-NE PARLE JAMAIS d'eux \xE0 la 3\xE8me personne ("il", "elle", "ils", "cette personne"). Djoss leur parle directement entre quat'yeux !
+${moduleSpecificInstructions}
+
+R\xC8GLE ABSOLUE DE STYLE & TON DJOSS :
+1. **INSOLENCE & PUNCHLINES** : Djoss est arrogant, provocateur, taquin et sans piti\xE9 ! Punchlines dr\xF4les et piquantes.
+2. **ARGOT IVOIRIEN & CAMEROUNAIS OBLIGATOIRE** : Int\xE8gre naturellement du Nouchi et Camfranglais (*gb\xEA, goumin, drap, kpakpato, tchiza, m\xF4g\xF4, mbom, tu wanda, gbonhi, attacher, c'est g\xE2t\xE9, tu es dans la sauce...*).
+3. **ADRESSE DIRECTE ("TU")** : Parle aux participants EN FACE en les appelant par leur pr\xE9nom ! Jamais de 3\xE8me personne ("il", "elle").
 
 R\xC8GLE CAPITALE SUR LA D\xC9TECTION DU TYPE DE RELATION :
-Tu dois imp\xE9rativement LIRE attentivement le contenu du chat ci-dessous pour D\xC9TERMINER la nature exacte de la relation r\xE9elle entre les participants (s'agit-il d'amis/potes, d'un couple/crush, de coll\xE8gues de travail, d'un groupe familial, etc.).
-NE SUPPOSE PAS automatiquement qu'il s'agit d'un couple ou d'un flirt si les discussions montrent simplement deux potes/amis qui se vannent, parlent de soir\xE9es, de devoirs ou de jeux vid\xE9o ! Adapte tout le vocabulaire, le ton et les analyses du rapport au type de relation r\xE9ellement observ\xE9 dans la discussion (amicale, fraternelle, professionnelle, ou amoureuse).
+Lis ATTENTIVEMENT le contenu du chat pour d\xE9terminer la nature exacte de la relation. NE SUPPOSE PAS automatiquement qu'il s'agit d'un couple si les messages montrent clairement des potes qui se vannent. Adapte toute ton analyse au type de relation r\xE9ellement observ\xE9.
 
-R\xC8GLE ABSOLUE & OBLIGATOIRE DU D\xC9BUT DE RAPPORT ET DU STYLE :
-1. **PREMI\xC8RE SECTION IMP\xC9RATIVE ("recap_choc")** :
-   - Le rapport DOIT TOUJOURS COMMENCER par la section id: "recap_choc", avec titre_affiche: "" (Laisse le titre de section vide ! Ne met aucun titre comme "choc & Bilan cash").
-   - Cette section contient **EXACTEMENT 2 PARAGRAPHES MAXIMUM** (2 blocs de type "texte").
-   - **Formule d'attaque directe obligatoire** : Le tout premier paragraphe DOIT commencer directement sans introduction par une phrase percutante d\xE9clarant OBLIGATOIREMENT ET STRICTEMENT CE NOMBRE EXACT : "${formattedMsgs} messages" (ex: "Ok, j'ai analys\xE9 minutieusement vos **${formattedMsgs} messages** de discussion..." ou "Apr\xE8s avoir \xE9pluch\xE9 vos **${formattedMsgs} messages**...").
-   - ATTENTION : Ne tente JAMAIS de recompter toi-m\xEAme le nombre de lignes dans l'\xE9chantillon de texte fourni ! D\xE9clare OBLIGATOIREMENT ET STRICTEMENT le nombre exact de ${formattedMsgs} messages !
-   - **Ton PERCUTANT, CHOQUANT & INTRIGUANT** : Les premi\xE8res phrases de Djoss doivent \xEAtre percutantes, choquantes et provocatrices pour secouer le lecteur, faire mouche imm\xE9diatement et le pousser \xE0 vouloir d\xE9vorer toute la suite du rapport !
+STRUCTURE DU RAPPORT :
 
-2. **R\xC8GLE STRICTE ET ABSOLUE SUR L'USAGE DU GRAS (texte en gras)** :
-   - N'ABUSE JAMAIS DES MOTS EN GRAS !
-   - MAXIMUM 5 expressions ou mots en gras (balise **mots**) dans la section d'introduction "recap_choc".
-   - MAXIMUM 10 expressions ou mots en gras DANS L'ENSEMBLE DU RAPPORT COMPLET (sur toutes les 8 sections r\xE9unies).
-   - Reserve le gras exclusivement \xE0 1 ou 2 chiffres ou r\xE9v\xE9lations cl\xE9s majeurs par section. Tout le reste du texte doit \xEAtre r\xE9dig\xE9 en texte normal non gras !
+Le rapport DOIT contenir :
 
-Voici le contenu de la conversation WhatsApp export\xE9e \xE0 analyser :
+A) SECTIONS OBLIGATOIRES (toujours pr\xE9sentes) :
+1. "recap_choc" (titre_affiche: "") \u2014 2 paragraphes max. Le 1er DOIT commencer par : "Ok, j'ai analys\xE9 minutieusement vos **${formattedMsgs} messages**..." Ton percutant et intriguant.
+2. "casting" (titre_affiche: "\u{1F3AD} LE CASTING & LES FAUX-SEMBLANTS") \u2014 Pr\xE9sente chaque participant : image donn\xE9e vs. ce que ses messages r\xE9v\xE8lent r\xE9ellement. Contraste entre l'apparence et la r\xE9alit\xE9.
+3. "dialecte" (titre_affiche: "\u{1F5E3}\uFE0F LE DIALECTE PRIV\xC9 & D\xC9CODAGE DES MOTS") \u2014 Tics de langage, emojis r\xE9currents, expressions favorites, vannes internes. Ce que ce langage cod\xE9 r\xE9v\xE8le sur leur proximit\xE9.
+4. "flags" (titre_affiche: "\u{1F6A9} RED FLAGS & GREEN FLAGS OBSERV\xC9S") \u2014 Liste les comportements toxiques/fuyants ET les signaux d'attention sinc\xE8re. Sois pr\xE9cis avec des exemples du chat.
+5. "recompenses" (titre_affiche: "\u{1F3C6} LA C\xC9R\xC9MONIE DES R\xC9COMPENSES DJOSS") \u2014 Troph\xE9es humoristiques personnalis\xE9s (ex: \u{1F947} Troph\xE9e de l'esquiveur d'or, \u{1F948} M\xE9daille du vu-sans-r\xE9ponse, etc.)
+6. "verdict_final" (titre_affiche: "\u{1F52E} LE VERDICT FINAL & L'AVIS YELP DE DJOSS") \u2014 Verdict cat\xE9gorique : ${verdictInstruction}. Justification avec les preuves. Conseil strat\xE9gique cash.
+
+B) SECTIONS CONDITIONNELLES (choisis 2 \xE0 4 sections parmi celles-ci UNIQUEMENT si elles sont pertinentes pour CETTE conversation sp\xE9cifique) :
+- "dynamique" (titre_affiche: "\u26A1 LA DYNAMIQUE R\xC9ELLE & RAPPORT DE FORCE") \u2014 Qui poursuit qui, qui a le contr\xF4le, d\xE9s\xE9quilibre. UNIQUEMENT s'il y a un vrai rapport de force d\xE9tectable.
+- "dossiers" (titre_affiche: "\u{1F4C1} LES AFFAIRES & DOSSIERS CHAUDS DU CHAT") \u2014 \xC9v\xE9nements/tensions/vannes/embrouilles marquants. Donne un titre th\xE9\xE2tral \xE0 chaque affaire. UNIQUEMENT si de vrais dossiers existent dans la conversation.
+- "nondits" (titre_affiche: "\u{1F575}\uFE0F LES NON-DITS & SILENCES SUSPECT\xC9S") \u2014 Temps de latence, esquives, sujets \xE9vit\xE9s. UNIQUEMENT si des silences ou esquives significatifs sont d\xE9tect\xE9s.
+- "timeline" (titre_affiche: "\u{1F4C5} LA CHRONOLOGIE DES \xC9V\xC9NEMENTS MARQUANTS") \u2014 Moments cl\xE9s dat\xE9s montrant l'\xE9volution. UNIQUEMENT si la conversation est assez longue et montre des phases distinctes.
+- "ghosting" (titre_affiche: "\u{1F47B} LE GHOSTING & LES DISPARITIONS SUSPECTES") \u2014 Patterns de disparition, messages ignor\xE9s. UNIQUEMENT si des patterns de ghosting sont r\xE9ellement observ\xE9s.
+- "jalousie" (titre_affiche: "\u{1F49A} LA JALOUSIE & LES PIQUES CACH\xC9ES") \u2014 Indices de jalousie, comparaisons, piques passives-agressives. UNIQUEMENT si ces comportements existent dans le chat.
+- "humour" (titre_affiche: "\u{1F602} L'HUMOUR & LES VANNES INTERNES") \u2014 Blagues r\xE9currentes, d\xE9lires partag\xE9s, niveaux d'humour. UNIQUEMENT si la conversation contient beaucoup de vannes ou d'humour.
+
+R\xC8GLE STRICTE : NE FORCE JAMAIS une section conditionnelle si le contenu de la conversation ne s'y pr\xEAte pas ! Un rapport avec 8 sections pertinentes est MIEUX qu'un rapport avec 12 sections dont 4 sont du remplissage creux.
+
+R\xC8GLES D'\xC9CRITURE :
+- Chaque section doit contenir au minimum 2-3 blocs de texte substantiels + au moins 2 blocs "citation" avec des extraits EXACTS mot-pour-mot du chat.
+- AUCUNE citation invent\xE9e ! Chaque citation DOIT exister dans le texte fourni ci-dessous.
+- N'abuse pas du gras : maximum 10 expressions en **gras** dans tout le rapport.
+- Le rapport doit \xEAtre long, dense et fouill\xE9. Pas de r\xE9sum\xE9 exp\xE9di\xE9.
+
+Voici le contenu de la conversation WhatsApp export\xE9e :
 """
 ${parsedChat.rawText}
 """
 
-Instructions de r\xE9ponse :
-G\xE9n\xE8re un rapport JSON structur\xE9 tr\xE8s complet, fouill\xE9 et substantiel avec exactement 8 sections d\xE9taill\xE9es (chacune contenant plusieurs paragraphes et des citations exactes mot pour mot du chat) :
-
-Structure JSON :
+Structure JSON \xE0 g\xE9n\xE9rer :
 {
-  "titre": "Titre percutant, mordant et hyper-sp\xE9cifique aux participants",
+  "titre": "Titre percutant, mordant et hyper-sp\xE9cifique aux participants et \xE0 CETTE conversation",
   "verdict": ${isFriendzone ? '"FRIENDZONE" ou "PAS FRIENDZONE"' : "null"},
   "sections": [
     {
-      "id": "recap_choc",
-      "titre_affiche": "",
+      "id": "identifiant_section",
+      "titre_affiche": "Titre de la section tel qu'il sera affich\xE9 (vide pour recap_choc)",
       "blocs": [
-        { "type": "texte", "contenu": "Ok, j'ai analys\xE9 minutieusement vos **${formattedMsgs} messages** de discussion. Le constat est cash et sans filtre..." },
-        { "type": "texte", "contenu": "Second paragraphe de synth\xE8se (max 2 paragraphes) avec mots-cl\xE9s et r\xE9v\xE9lations percutantes..." }
-      ]
-    },
-    {
-      "id": "casting",
-      "titre_affiche": "\u{1F3AD} Le casting & les faux-semblants",
-      "blocs": [
-        { "type": "texte", "contenu": "Analyse approfondie de la premi\xE8re personne..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Extrait exact du chat" },
-        { "type": "texte", "contenu": "Analyse approfondie de la deuxi\xE8me personne..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Autre extrait exact" }
-      ]
-    },
-    {
-      "id": "dynamique",
-      "titre_affiche": "\u26A1 La dynamique r\xE9elle & rapport de force",
-      "blocs": [
-        { "type": "texte", "contenu": "Analyse du rapport de force et de qui contr\xF4le le rythme..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Citation r\xE9v\xE9latrice" },
-        { "type": "texte", "contenu": "Explication de la dissym\xE9trie d'attention et d'investissement..." }
-      ]
-    },
-    {
-      "id": "dossiers",
-      "titre_affiche": "\u{1F4C1} Les Affaires & Dossiers Chauds du Chat",
-      "blocs": [
-        { "type": "texte", "contenu": "\u{1F50E} L'AFFAIRE #1 (ex: L'AFFAIRE DU VOYAGE ANNUL\xC9) : R\xE9cit d\xE9taill\xE9 des faits r\xE9els, qui a dit quoi..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Citation mot-\xE0-mot tir\xE9e du chat" },
-        { "type": "texte", "contenu": "Punchline et commentaire tordant de Djoss sur cette affaire..." },
-        { "type": "texte", "contenu": "\u{1F50E} L'AFFAIRE #2 (ex: L'AFFAIRE DU VENT DE 48H) : R\xE9cit des faits et du dossier..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Autre citation exacte" },
-        { "type": "texte", "contenu": "Verdict humoristique de Djoss sur le dossier #2..." }
-      ]
-    },
-    {
-      "id": "dialecte",
-      "titre_affiche": "\u{1F5E3}\uFE0F Le dialecte priv\xE9 & d\xE9codage des mots",
-      "blocs": [
-        { "type": "texte", "contenu": "D\xE9cryptage des tics de langage, \xE9mojis r\xE9currents et vannes internes..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Citation d'un mot-cl\xE9 ou \xE9moji r\xE9current" },
-        { "type": "texte", "contenu": "Ce que ce langage cod\xE9 indique sur leur proximit\xE9 r\xE9elle..." }
-      ]
-    },
-    {
-      "id": "nondits",
-      "titre_affiche": "\u{1F575}\uFE0F Les non-dits & silences suspect\xE9s",
-      "blocs": [
-        { "type": "texte", "contenu": "Analyse des temps de latence, esquives et sujets \xE9vit\xE9s..." },
-        { "type": "citation", "auteur": "Pr\xE9nom", "texte": "Extrait o\xF9 une question reste sans vraie r\xE9ponse" }
-      ]
-    },
-    {
-      "id": "flags",
-      "titre_affiche": "\u{1F6A9} Red Flags & Green Flags observ\xE9s",
-      "blocs": [
-        { "type": "texte", "contenu": "\u{1F6A9} RED FLAGS : D\xE9tail des comportements toxiques ou fuyants rep\xE9r\xE9s." },
-        { "type": "texte", "contenu": "\u{1F7E2} GREEN FLAGS : D\xE9tail des signaux d'attention sinc\xE8re et de respect." }
-      ]
-    },
-    {
-      "id": "recompenses",
-      "titre_affiche": "\u{1F3C6} La c\xE9r\xE9monie des r\xE9compenses Djoss",
-      "blocs": [
-        { "type": "texte", "contenu": "\u{1F947} Troph\xE9e de l'esquiveur d'or attribu\xE9 avec justification..." },
-        { "type": "texte", "contenu": "\u{1F948} M\xE9daille du premier \xE0 relancer \xE0 2h du matin..." },
-        { "type": "texte", "contenu": "\u{1F949} Palme d'or du pav\xE9 de texte rest\xE9 sans r\xE9ponse..." }
-      ]
-    },
-    {
-      "id": "verdict_final",
-      "titre_affiche": "\u{1F52E} Le verdict final & l'avis Yelp de Djoss",
-      "blocs": [
-        { "type": "texte", "contenu": "Verdict final cat\xE9gorique, note sur 5 \xE9toiles fictive et bilan global..." },
-        { "type": "texte", "contenu": "\u{1F4A1} Conseil strat\xE9gique cash et actionnable pour la suite..." }
+        { "type": "texte", "contenu": "Paragraphe d'analyse..." },
+        { "type": "citation", "auteur": "Pr\xE9nom exact du participant", "texte": "Extrait exact mot-pour-mot du chat" }
       ]
     }
   ],
@@ -542,12 +539,8 @@ Structure JSON :
       process.env.ANTHROPIC_MODEL,
       "claude-sonnet-4-5",
       "claude-haiku-4-5",
-      "claude-opus-4-5",
       "claude-3-5-sonnet-20241022",
-      "claude-3-5-sonnet-20240620",
-      "claude-3-5-haiku-20241022",
-      "claude-3-opus-20240229",
-      "claude-3-haiku-20240307"
+      "claude-3-5-haiku-20241022"
     ].filter(Boolean);
     let lastAnthropicError = null;
     for (const model of anthropicModels) {
@@ -555,7 +548,7 @@ Structure JSON :
         console.log(`[Djoss Server] G\xE9n\xE9ration du rapport via Anthropic (${model})...`);
         const response = await anthropicClient.messages.create({
           model,
-          max_tokens: 16e3,
+          max_tokens: 8e3,
           system: djossSystemInstruction + "\n\nIMPORTANT: Tu DOIS IMP\xC9RATIVEMENT r\xE9pondre UNIQUEMENT avec un objet JSON valide suivant exactement la structure demand\xE9e, sans aucun texte avant ou apr\xE8s, et SANS balises markdown ```json ou ```.",
           messages: [{ role: "user", content: userPrompt }]
         });
@@ -626,7 +619,7 @@ Structure JSON :
             required: ["titre", "sections"]
           }
         },
-        timeoutMs: 18e3
+        timeoutMs: 25e3
       });
       const parsed = JSON.parse(response.text || "{}");
       if (parsed.titre && parsed.sections && parsed.sections.length >= 3) {
@@ -921,7 +914,17 @@ Le JSON doit poss\xE9der EXACTEMENT cette structure :
     };
     let promptCReport = null;
     if (module !== "friendzone" || meName) {
-      promptCReport = await genererRapport(fileContent, module, tone, meName);
+      try {
+        promptCReport = await genererRapport(fileContent, module, tone, meName);
+        if (promptCReport?.verdict) {
+          finalReport.verdict = promptCReport.verdict;
+        }
+        if (promptCReport?.titre) {
+          finalReport.title = promptCReport.titre;
+        }
+      } catch (genErr) {
+        console.warn(`[Djoss Server] genererRapport failed, teaser-only mode:`, genErr?.message);
+      }
     }
     const db = readDb();
     db[reportId] = finalReport;

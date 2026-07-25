@@ -399,7 +399,7 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
               )}
 
               {Boolean(section.titre_affiche) && (
-                <h2 className="font-serif font-black text-xl text-stone-900 flex items-center gap-2 border-b border-stone-200 pb-2">
+                <h2 className="text-center uppercase tracking-widest font-medium text-sm text-stone-600 border-b border-stone-200/60 pb-3 mt-1" style={{ fontFamily: "'Inter', 'Outfit', sans-serif", letterSpacing: '0.15em' }}>
                   {section.titre_affiche}
                 </h2>
               )}
