@@ -6,6 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
-api/index.js
 api/index.mjs
 api/index.ts
