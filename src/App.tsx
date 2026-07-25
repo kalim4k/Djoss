@@ -785,11 +785,23 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "L'analyse a échoué.");
+        let errorMsg = "L'analyse a échoué.";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (_) {
+          // Response is not JSON (likely an HTML error page from Vercel)
+          errorMsg = `Erreur serveur (${response.status}). Réessaie dans quelques instants.`;
+        }
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (_) {
+        throw new Error("Réponse invalide du serveur. Réessaie dans quelques instants.");
+      }
       setReportId(data.reportId);
       setReport(data.teaser);
       if (data.promptCReport) {

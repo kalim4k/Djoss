@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
+// vite is imported dynamically in startServer() only in dev mode
 import { GoogleGenAI, Modality, Type } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
@@ -35,10 +35,14 @@ if (supabaseUrl && supabaseKey && supabaseUrl.startsWith('http')) {
   console.log('[Djoss Server] Supabase non configuré (SUPABASE_URL/KEY manquant). Utilisation du stockage local.');
 }
 
-// Ensure data folder exists for simple JSON file database
+// Ensure data folder exists for simple JSON file database (skip on read-only FS like Vercel)
 const DATA_DIR = path.join(process.cwd(), 'data');
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('[Djoss Server] Cannot create data directory (read-only FS, using Supabase only).');
 }
 const DB_PATH = path.join(DATA_DIR, 'reports.json');
 
@@ -2436,6 +2440,8 @@ app.get('/api/generate-audio/:id', async (req, res) => {
 // Setup Vite Dev server or Serve production assets
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    // Dynamic import: vite is only needed in dev, not on Vercel/production
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

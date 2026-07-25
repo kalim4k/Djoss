@@ -79,8 +79,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
     setError(null);
     try {
       const res = await fetch('/api/admin/stats');
-      if (!res.ok) throw new Error("Impossible de charger les statistiques admin.");
-      const data = await res.json();
+      if (!res.ok) {
+        let errorMsg = "Impossible de charger les statistiques admin.";
+        try {
+          const errData = await res.json();
+          errorMsg = errData.error || errorMsg;
+        } catch (_) {
+          errorMsg = `Erreur serveur (${res.status}). Vérifie que les variables d'environnement sont configurées sur Vercel.`;
+        }
+        throw new Error(errorMsg);
+      }
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (_) {
+        throw new Error("Réponse invalide du serveur (pas du JSON). Vérifie les logs Vercel.");
+      }
       if (data.success) {
         setStats(data.stats);
         setProjects(data.projects || []);
