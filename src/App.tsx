@@ -206,6 +206,10 @@ export default function App() {
   const synthUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const analysisTriggeredRef = useRef<boolean>(false);
 
+  // Post-payment generation state (0 FCFA consumed before payment!)
+  const [isGeneratingPostPayment, setIsGeneratingPostPayment] = useState<boolean>(false);
+  const [postPaymentStep, setPostPaymentStep] = useState<number>(1);
+
   // Interactive Hero Mascot state
   const [heroMood, setHeroMood] = useState<'wise' | 'cool' | 'laughing' | 'thinking' | 'shocked'>('wise');
 
@@ -875,6 +879,169 @@ export default function App() {
     }
   };
 
+  // Build a zero-cost local teaser report (0 FCFA consumed!)
+  const buildLocalTeaserReport = (
+    mod: ModuleType,
+    meName: string,
+    partnerName: string,
+    totalMsgs: number,
+    participants: WhatsAppParticipant[]
+  ): PromptCReport => {
+    const formattedMsgs = totalMsgs > 0 ? totalMsgs.toLocaleString('fr-FR') : '1 480';
+    const p1 = meName || participants[0]?.name || "Utilisateur";
+    const p2 = partnerName || participants[1]?.name || "Correspondant";
+    const isGroup = ['group', 'family', 'work', 'other'].includes(mod);
+
+    let introText = `Ok, j'ai analysé minutieusement vos **${formattedMsgs} messages** de discussion entre **${p1}** et **${p2}**. Le constat est cash et sans filtre !`;
+    if (isGroup) {
+      const groupNames = participants.slice(0, 3).map(p => p.name).join(', ');
+      introText = `Ok, j'ai analysé minutieusement vos **${formattedMsgs} messages** de discussion dans le groupe (${groupNames || 'du chat'}). Le constat est cash et sans filtre !`;
+    }
+
+    return {
+      titre: `Analyse Djoss — ${isGroup ? 'Discussion de Groupe' : `${p1} & ${p2}`}`,
+      verdict: mod === 'friendzone' ? 'VERDICT DISPONIBLE APRÈS DÉBLOCAGE' : null,
+      sections: [
+        {
+          id: 'recap_choc',
+          titre_affiche: '',
+          blocs: [
+            { type: 'texte', contenu: introText },
+            { type: 'texte', contenu: `Toutes les vérités cachées, le rapport de force, les tics de langage et les piques secrètes ont été décortiqués par Djoss. Débloque le rapport pour tout découvrir !` }
+          ]
+        },
+        {
+          id: 'casting',
+          titre_affiche: '🎭 LE CASTING & LES FAUX-SEMBLANTS',
+          blocs: [
+            { type: 'texte', contenu: `Analyse détaillée du profil de chaque participant et du décalage entre l'image donnée et les preuves tirées des messages... (Contenu flouté — Débloque le rapport complet pour lire la suite)` },
+            { type: 'citation', auteur: p1, texte: "Extrait réservé au rapport complet..." }
+          ]
+        },
+        {
+          id: 'flags',
+          titre_affiche: '🚩 RED FLAGS & GREEN FLAGS OBSERVÉS',
+          blocs: [
+            { type: 'texte', contenu: `Inventaire complet des signaux d'attention et des comportements observés dans vos échanges... (Contenu flouté)` }
+          ]
+        },
+        {
+          id: 'recompenses',
+          titre_affiche: '🏆 LA CÉRÉMONIE DES RÉCOMPENSES DJOSS',
+          blocs: [
+            { type: 'texte', contenu: `🥇 Trophée de l'esquiveur d'or, 🥈 Médaille du vu-sans-réponse à 2h du matin... (Contenu flouté)` }
+          ]
+        },
+        {
+          id: 'verdict_final',
+          titre_affiche: "🔮 LE VERDICT FINAL & L'AVIS YELP DE DJOSS",
+          blocs: [
+            { type: 'texte', contenu: `Le verdict catégorique sans filtre de Djoss avec les conseils stratégiques sur-mesure... (Contenu flouté)` }
+          ]
+        }
+      ],
+      position_coupure_teaser: { sectionId: 'recap_choc', blocIndex: 1 },
+      isUnlocked: false
+    };
+  };
+
+  // Execute post-payment generation (calls Gemini AI + ElevenLabs Voice ONCE payment is validated)
+  const executePostPaymentGeneration = async () => {
+    setIsGeneratingPostPayment(true);
+    setPostPaymentStep(1); // Step 1: Preparation
+
+    try {
+      // Step 2: Call /api/analyze for Gemini/Anthropic AI full report
+      setPostPaymentStep(2);
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileContent: rawFileContent,
+          module: selectedModule,
+          tone: selectedTone,
+          dialect: selectedDialect,
+          context: relationContext,
+          meName: confirmedMeName,
+          partnerName: confirmedPartnerName
+        })
+      });
+
+      let data: any = null;
+      if (response.ok) {
+        data = await response.json();
+      }
+
+      const activeReportId = data?.reportId || reportId || projectSlug;
+      setReportId(activeReportId);
+
+      let unlockedPromptC = null;
+      if (data?.promptCReport) {
+        unlockedPromptC = { ...data.promptCReport, isUnlocked: true };
+        setPromptCReportData(unlockedPromptC);
+      } else if (promptCReportData) {
+        unlockedPromptC = { ...promptCReportData, isUnlocked: true };
+        setPromptCReportData(unlockedPromptC);
+      }
+
+      if (data?.teaser) {
+        setReport({ ...data.teaser, isUnlocked: true });
+      } else if (report) {
+        setReport({ ...report, isUnlocked: true });
+      }
+
+      // Step 3: Call /api/generate-audio/:id for ElevenLabs Voice generation
+      setPostPaymentStep(3);
+      try {
+        const audioRes = await fetch(`/api/generate-audio/${activeReportId}`);
+        if (audioRes.ok) {
+          const audioData = await audioRes.json();
+          if (audioData.audioBase64) {
+            const audioBytes = atob(audioData.audioBase64);
+            const arrayBuffer = new ArrayBuffer(audioBytes.length);
+            const uint8Array = new Uint8Array(arrayBuffer);
+            for (let i = 0; i < audioBytes.length; i++) {
+              uint8Array[i] = audioBytes.charCodeAt(i);
+            }
+            const blob = new Blob([uint8Array], { type: 'audio/mp3' });
+            const url = URL.createObjectURL(blob);
+            setAudioUrl(url);
+            const audio = new Audio(url);
+            audioRef.current = audio;
+            audio.addEventListener('timeupdate', () => {
+              setAudioProgress((audio.currentTime / audio.duration) * 100);
+            });
+            audio.addEventListener('loadedmetadata', () => {
+              setAudioDuration(audio.duration);
+            });
+            audio.addEventListener('ended', () => {
+              setIsPlaying(false);
+              setAudioProgress(0);
+            });
+          }
+        }
+      } catch (audioErr) {
+        console.warn("[Djoss] Post-payment audio generation note:", audioErr);
+      }
+
+      // Sync unlocked state to storage & DB
+      await syncStateToDb({
+        promptCReport: unlockedPromptC,
+        report: data?.teaser ? { ...data.teaser, isUnlocked: true } : null,
+        currentStep: 'report',
+        force: true
+      });
+    } catch (err: any) {
+      console.error("[Djoss] Post-payment error:", err);
+      // Fallback: unlock current local report if AI call fails
+      setPromptCReportData(prev => prev ? { ...prev, isUnlocked: true } : null);
+      setReport(prev => prev ? { ...prev, isUnlocked: true } : null);
+    } finally {
+      setIsGeneratingPostPayment(false);
+      setCurrentStep('report');
+    }
+  };
+
   // Simulate Payment Flow
   const triggerPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1042,15 +1209,13 @@ export default function App() {
     };
   }, []);
 
-  // Trigger analysis automatically when entering step 6 (Processing Animation)
+  // Step 6: 100% Local processing animation (0 FCFA API calls consumed before payment!)
   useEffect(() => {
-    if (wizardStepIndex === 6 && rawFileContent && !analysisTriggeredRef.current) {
-      analysisTriggeredRef.current = true;
-      runAnalysis();
-    }
-    // Reset the guard if user goes back before step 6
-    if (wizardStepIndex < 6) {
-      analysisTriggeredRef.current = false;
+    if (wizardStepIndex === 6 && rawFileContent) {
+      const timer = setTimeout(() => {
+        setWizardStepIndex(7);
+      }, 2500);
+      return () => clearTimeout(timer);
     }
   }, [wizardStepIndex, rawFileContent]);
 
@@ -2150,11 +2315,6 @@ export default function App() {
                   if (selectedModule === 'friendzone') {
                     setWizardStepIndex(85);
                   } else {
-                    if (promptCReportData && promptCReportData.titre) {
-                      updateNamesInPromptCReport(p1, p2);
-                    } else {
-                      regeneratePromptCReport(p1);
-                    }
                     setWizardStepIndex(9);
                   }
                 }}
@@ -2185,7 +2345,6 @@ export default function App() {
                   if (partnerName) {
                     setConfirmedPartnerName(partnerName);
                   }
-                  regeneratePromptCReport(selectedName);
                   setWizardStepIndex(9);
                 }}
                 onBack={() => setWizardStepIndex(8)}
@@ -2425,15 +2584,21 @@ export default function App() {
                 {/* Bottom Navigation Buttons */}
                 <div className="flex flex-col gap-3 pt-2">
                   <button 
-                    disabled={isGeneratingPromptC}
-                    onClick={() => setCurrentStep('report')}
-                    className="w-full bg-[#1F1F1F] hover:bg-[#333333] text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                    onClick={() => {
+                      const localTeaser = buildLocalTeaserReport(
+                        selectedModule,
+                        confirmedMeName,
+                        confirmedPartnerName,
+                        totalMessages,
+                        parsedParticipants
+                      );
+                      setPromptCReportData(localTeaser);
+                      setCurrentStep('report');
+                    }}
+                    className="w-full bg-[#1F1F1F] hover:bg-[#333333] text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
                   >
-                    {isGeneratingPromptC ? (
-                      <>Djoss prépare ton rapport... <RefreshCw className="w-4 h-4 animate-spin text-amber-400" /></>
-                    ) : (
-                      <>Recevoir le rapport <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" /></>
-                    )}
+                    <span>Voir l'aperçu du rapport</span>
+                    <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
                   </button>
 
                   <button 
@@ -2469,11 +2634,59 @@ export default function App() {
               </div>
             )}
 
-            {isGeneratingPromptC ? (
-              <div className="bg-white p-8 sm:p-12 rounded-3xl border border-stone-200/80 text-center space-y-4 shadow-sm my-8">
-                <div className="w-12 h-12 border-4 border-[#BE123C] border-t-transparent rounded-full animate-spin mx-auto" />
-                <h3 className="font-serif font-black text-xl text-stone-900">Djoss peaufine ton rapport...</h3>
-                <p className="text-xs text-stone-500 font-medium">Rédaction des punchlines avec la perspective de {confirmedMeName || 'l\'utilisateur'}...</p>
+            {isGeneratingPostPayment ? (
+              <div className="bg-white p-8 sm:p-12 rounded-3xl border border-stone-200/80 text-center space-y-6 shadow-sm my-8 max-w-lg mx-auto animate-fade-in">
+                <div className="relative inline-flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-4 border-dashed border-[#BE123C]/50 animate-spin" style={{ animationDuration: '4s' }}></div>
+                  <MascotAvatar expression="thinking" size={80} className="rounded-full ring-4 ring-rose-50 shadow-md relative z-10" />
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="font-serif font-black text-2xl text-stone-900">
+                    Djoss génère ton rapport complet...
+                  </h3>
+                  <p className="text-xs text-stone-500 font-medium">
+                    Paiement confirmé ! Rédaction de l'analyse IA et enregistrement du vocal en cours.
+                  </p>
+                </div>
+
+                <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-4 text-left text-xs font-medium space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span className={postPaymentStep >= 1 ? "text-emerald-600 font-bold" : "text-stone-400"}>
+                        {postPaymentStep > 1 ? "✓" : "⏳"}
+                      </span>
+                      <span className={postPaymentStep === 1 ? "font-bold text-stone-900" : "text-stone-600"}>
+                        Préparation de votre rapport personnalisé...
+                      </span>
+                    </span>
+                    {postPaymentStep === 1 && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#BE123C]" />}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span className={postPaymentStep >= 2 ? "text-emerald-600 font-bold" : "text-stone-400"}>
+                        {postPaymentStep > 2 ? "✓" : postPaymentStep === 2 ? "🧠" : "⚪"}
+                      </span>
+                      <span className={postPaymentStep === 2 ? "font-bold text-stone-900" : "text-stone-600"}>
+                        Génération du résumé & de l'analyse IA par Djoss...
+                      </span>
+                    </span>
+                    {postPaymentStep === 2 && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#BE123C]" />}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span className={postPaymentStep >= 3 ? "text-emerald-600 font-bold" : "text-stone-400"}>
+                        {postPaymentStep === 3 ? "🎙️" : "⚪"}
+                      </span>
+                      <span className={postPaymentStep === 3 ? "font-bold text-stone-900" : "text-stone-600"}>
+                        Génération du rapport vocal (ElevenLabs)...
+                      </span>
+                    </span>
+                    {postPaymentStep === 3 && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#BE123C]" />}
+                  </div>
+                </div>
               </div>
             ) : !promptCReportData ? (
               <div className="bg-white p-8 sm:p-12 rounded-3xl border border-stone-200/80 text-center space-y-5 shadow-sm my-8 max-w-lg mx-auto">
@@ -2481,17 +2694,20 @@ export default function App() {
                   ⚡
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-serif font-black text-xl text-stone-900">Service d'analyse indisponible</h3>
+                  <h3 className="font-serif font-black text-xl text-stone-900">Aperçu indisponible</h3>
                   <p className="text-xs text-stone-600 leading-relaxed max-w-sm mx-auto font-medium">
-                    Djoss n'a pas pu générer ton rapport sur mesure pour l'instant. Tes données sont entièrement confidentielles et sécurisées.
+                    Djoss n'a pas pu créer l'aperçu de ton rapport pour l'instant. Tes données sont confidentielles.
                   </p>
                 </div>
                 <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
                   <button 
-                    onClick={() => regeneratePromptCReport()} 
+                    onClick={() => {
+                      setCurrentStep('wizard');
+                      setWizardStepIndex(9);
+                    }} 
                     className="bg-[#1F1F1F] hover:bg-stone-800 text-white font-bold text-xs py-3.5 px-5 rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
                   >
-                    <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> Réessayer la génération
+                    <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> Réessayer l'aperçu
                   </button>
                   <button 
                     onClick={() => {
@@ -2522,26 +2738,7 @@ export default function App() {
           onPayClick={async (optionChoisie) => {
             console.log("[Djoss] Déblocage du rapport pour l'option:", optionChoisie);
             setIsUnlockModalOpen(false);
-
-            const updatedPromptC = promptCReportData ? { ...promptCReportData, isUnlocked: true } : null;
-            const updatedReport = report ? { ...report, isUnlocked: true } : null;
-
-            if (updatedPromptC) {
-              setPromptCReportData(updatedPromptC);
-            }
-            if (updatedReport) {
-              setReport(updatedReport);
-            }
-
-            setCurrentStep('report');
-
-            // Force immediate sync to localStorage & backend DB
-            await syncStateToDb({
-              promptCReport: updatedPromptC,
-              report: updatedReport,
-              currentStep: 'report',
-              force: true
-            });
+            await executePostPaymentGeneration();
           }}
         />
 
