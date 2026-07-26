@@ -51,6 +51,16 @@ interface ProjectSummary {
   scoreLabel?: string;
 }
 
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
 interface AdminDashboardProps {
   onGoHome: () => void;
   onOpenReport?: (slug: string) => void;
@@ -59,6 +69,8 @@ interface AdminDashboardProps {
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpenReport }) => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [activeTab, setActiveTab] = useState<'analytics' | 'messages'>('analytics');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -74,10 +86,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<boolean>(false);
 
+  const fetchContactMessages = async () => {
+    try {
+      const res = await fetch('/api/admin/contact-messages');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setContactMessages(data.messages || []);
+        }
+      }
+    } catch (e) {
+      console.warn("Erreur chargement messages de contact:", e);
+    }
+  };
+
+  const handleToggleMessageRead = async (id: string, currentStatus: boolean) => {
+    try {
+      const res = await fetch(`/api/admin/contact-messages/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: !currentStatus })
+      });
+      if (res.ok) {
+        setContactMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !currentStatus } : m));
+      }
+    } catch (e) {
+      alert("Erreur lors de la mise à jour du statut.");
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer ce message de contact ?")) return;
+    try {
+      const res = await fetch(`/api/admin/contact-messages/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setContactMessages(prev => prev.filter(m => m.id !== id));
+        setActionMessage("Message supprimé.");
+        setTimeout(() => setActionMessage(null), 3000);
+      }
+    } catch (e) {
+      alert("Erreur lors de la suppression du message.");
+    }
+  };
+
   const fetchAdminData = async () => {
     setLoading(true);
     setError(null);
     try {
+      await fetchContactMessages();
       const res = await fetch('/api/admin/stats');
       if (!res.ok) {
         let errorMsg = "Impossible de charger les statistiques admin.";
@@ -363,11 +419,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
           </div>
         </div>
 
+        {/* Navigation Tabs (Analytics vs Contact Messages) */}
+        <div className="flex items-center gap-2 border-b border-stone-800 pb-3">
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-amber-500 text-stone-950 shadow-md font-black'
+                : 'bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Statistiques & Projets</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer relative ${
+              activeTab === 'messages'
+                ? 'bg-amber-500 text-stone-950 shadow-md font-black'
+                : 'bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Messages de Contact</span>
+            {contactMessages.filter(m => !m.isRead).length > 0 && (
+              <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse">
+                {contactMessages.filter(m => !m.isRead).length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Loading State */}
         {loading && !stats && (
           <div className="flex items-center justify-center py-24 text-stone-400 space-x-3">
             <RefreshCw className="w-6 h-6 animate-spin text-amber-400" />
-            <span className="font-semibold text-sm">Chargement des métriques Djoss...</span>
+            <span className="font-semibold text-sm">Chargement des données Djoss...</span>
           </div>
         )}
 
@@ -382,9 +470,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
           </div>
         )}
 
-        {/* KPI Grid */}
-        {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* TAB 1: ANALYTICS & PROJECTS */}
+        {activeTab === 'analytics' && stats && (
+          <div className="space-y-8 animate-fade-in">
+            {/* KPI Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* KPI 1: Rapports Générés */}
             <div className="bg-stone-900 border border-stone-800/80 rounded-3xl p-5 space-y-3 relative overflow-hidden group hover:border-stone-700 transition-all">
@@ -451,10 +541,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
             </div>
 
           </div>
-        )}
 
-        {/* Visual Charts & Breakdown Section */}
-        {stats && (
+          {/* Visual Charts & Breakdown Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Breakdown by Module */}
@@ -524,7 +612,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
             </div>
 
           </div>
-        )}
 
         {/* Projects Data Table Header & Controls */}
         <div className="bg-stone-900 border border-stone-800/80 rounded-3xl p-6 space-y-6">
@@ -739,6 +826,111 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
             )}
           </div>
         </div>
+      </div>
+    )}
+
+        {/* TAB 2: CONTACT MESSAGES INBOX */}
+        {activeTab === 'messages' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-black text-white">Messages de Contact Reçus</h2>
+                <p className="text-xs text-stone-400">
+                  {contactMessages.length} message{contactMessages.length > 1 ? 's' : ''} au total ({contactMessages.filter(m => !m.isRead).length} non lu{contactMessages.filter(m => !m.isRead).length > 1 ? 's' : ''})
+                </p>
+              </div>
+
+              <button
+                onClick={fetchContactMessages}
+                className="text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-200 px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 border border-stone-700/60"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Actualiser les messages</span>
+              </button>
+            </div>
+
+            {contactMessages.length === 0 ? (
+              <div className="bg-stone-900/60 border border-stone-800 rounded-3xl p-12 text-center text-stone-500 space-y-3">
+                <MessageSquare className="w-10 h-10 mx-auto text-stone-600" />
+                <p className="font-bold text-sm text-stone-400">Aucun message de contact pour le moment.</p>
+                <p className="text-xs">Les messages soumis par les utilisateurs via le footer s'afficheront ici.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {contactMessages.map((msg) => (
+                  <div 
+                    key={msg.id}
+                    className={`bg-stone-900 border rounded-3xl p-5 sm:p-6 transition-all space-y-3.5 ${
+                      !msg.isRead ? 'border-amber-500/60 bg-stone-900/90 shadow-lg shadow-amber-500/5' : 'border-stone-800/80'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-800 pb-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                          {!msg.isRead && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" title="Nouveau message non lu" />
+                          )}
+                          <h3 className="font-black text-base text-white">{msg.subject || 'Sans sujet'}</h3>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            msg.isRead ? 'bg-stone-800 text-stone-400' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          }`}>
+                            {msg.isRead ? 'Lu' : 'Nouveau'}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-stone-400">
+                          <span className="font-bold text-stone-200">👤 {msg.name}</span>
+                          <a href={`mailto:${msg.email}`} className="text-amber-400 hover:underline font-mono">
+                            ✉️ {msg.email}
+                          </a>
+                        </div>
+                      </div>
+
+                      <span className="text-[11px] font-mono text-stone-500">
+                        {new Date(msg.createdAt).toLocaleString('fr-FR')}
+                      </span>
+                    </div>
+
+                    {/* Message Body */}
+                    <div className="bg-stone-950 p-4 rounded-2xl border border-stone-800/80 text-stone-200 text-xs sm:text-sm font-sans leading-relaxed whitespace-pre-wrap">
+                      {msg.message}
+                    </div>
+
+                    {/* Action Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                      <button
+                        onClick={() => handleToggleMessageRead(msg.id, msg.isRead)}
+                        className="text-xs font-bold text-stone-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className={`w-4 h-4 ${msg.isRead ? 'text-emerald-400' : 'text-stone-500'}`} />
+                        <span>{msg.isRead ? 'Marquer comme non lu' : 'Marquer comme lu'}</span>
+                      </button>
+
+                      <div className="flex items-center gap-3">
+                        <a
+                          href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject || 'Votre message sur Djoss')}`}
+                          className="text-xs font-bold bg-stone-800 hover:bg-stone-700 text-amber-300 px-3.5 py-2 rounded-xl border border-stone-700/60 transition-all flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Répondre par email</span>
+                        </a>
+
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer flex items-center gap-1.5 py-1 px-2"
+                          title="Supprimer le message"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Supprimer</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
       </main>
     </div>

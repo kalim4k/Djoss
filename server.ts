@@ -97,6 +97,28 @@ function getPaymentTx(token: string): any {
   return db[token] || null;
 }
 
+// Contact Messages Storage
+const CONTACT_MESSAGES_PATH = path.join(DATA_DIR, 'contact_messages.json');
+
+function readContactMessagesDb(): any[] {
+  if (fs.existsSync(CONTACT_MESSAGES_PATH)) {
+    try {
+      return JSON.parse(fs.readFileSync(CONTACT_MESSAGES_PATH, 'utf8'));
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
+function writeContactMessagesDb(messages: any[]) {
+  try {
+    fs.writeFileSync(CONTACT_MESSAGES_PATH, JSON.stringify(messages, null, 2), 'utf8');
+  } catch (e) {
+    console.error("Error writing contact messages database:", e);
+  }
+}
+
 // Supabase + Local DB persistence wrappers
 async function getProjectFromDb(slug: string): Promise<any> {
   const localDb = readDb();
@@ -2227,6 +2249,109 @@ app.post('/api/admin/toggle-unlock', async (req, res) => {
 
   await saveProjectToDb(slug, project);
   res.json({ success: true, slug, isUnlocked });
+});
+
+// ==========================================
+// CONTACT FORM & ADMIN MESSAGES API
+// ==========================================
+
+// 1. Submit Contact Message
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Tous les champs obligatoires (Nom, Email, Message) sont requis." });
+    }
+
+    const newMessage = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      name: String(name).trim(),
+      email: String(email).trim(),
+      subject: String(subject || 'Demande d\'information Djoss').trim(),
+      message: String(message).trim(),
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+
+    const messages = readContactMessagesDb();
+    messages.unshift(newMessage);
+    writeContactMessagesDb(messages);
+
+    if (supabase) {
+      try {
+        await supabase.from('djoss_contact_messages').insert([newMessage]);
+      } catch (err) {
+        console.warn("[Djoss Server] Note: Table Supabase djoss_contact_messages non configurée, enregistré en local.");
+      }
+    }
+
+    res.json({ success: true, message: "Votre message a été transmis avec succès !" });
+  } catch (err: any) {
+    console.error("[Contact API] Erreur:", err);
+    res.status(500).json({ error: "Erreur serveur lors de l'envoi du message." });
+  }
+});
+
+// 2. Get Admin Contact Messages
+app.get('/api/admin/contact-messages', async (req, res) => {
+  try {
+    let messages = readContactMessagesDb();
+    if (supabase) {
+      try {
+        const { data } = await supabase.from('djoss_contact_messages').select('*').order('createdAt', { ascending: false });
+        if (data && Array.isArray(data) && data.length > 0) {
+          const map = new Map();
+          messages.forEach(m => map.set(m.id, m));
+          data.forEach(m => map.set(m.id, m));
+          messages = Array.from(map.values()).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        }
+      } catch (_) {}
+    }
+    res.json({ success: true, messages });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la récupération des messages." });
+  }
+});
+
+// 3. Toggle Message Read/Unread Status
+app.patch('/api/admin/contact-messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isRead } = req.body;
+    let messages = readContactMessagesDb();
+    const target = messages.find(m => m.id === id);
+    if (target) {
+      target.isRead = typeof isRead === 'boolean' ? isRead : !target.isRead;
+      writeContactMessagesDb(messages);
+      if (supabase) {
+        try {
+          await supabase.from('djoss_contact_messages').update({ isRead: target.isRead }).eq('id', id);
+        } catch (_) {}
+      }
+      return res.json({ success: true, message: target });
+    }
+    res.status(404).json({ error: "Message non trouvé." });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la mise à jour." });
+  }
+});
+
+// 4. Delete Contact Message
+app.delete('/api/admin/contact-messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let messages = readContactMessagesDb();
+    messages = messages.filter(m => m.id !== id);
+    writeContactMessagesDb(messages);
+    if (supabase) {
+      try {
+        await supabase.from('djoss_contact_messages').delete().eq('id', id);
+      } catch (_) {}
+    }
+    res.json({ success: true, message: "Message supprimé avec succès." });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la suppression." });
+  }
 });
 
 // API: Delete Project by Slug

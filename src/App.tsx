@@ -25,6 +25,9 @@ import { WhoTalksMost } from './components/WhoTalksMost';
 import { ReportResultView, MOCK_PROMPT_C_REPORT } from './components/ReportResultView';
 import { UnlockModal, UnlockOption } from './components/UnlockModal';
 import { VideoTutorialModal } from './components/VideoTutorialModal';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
+import { TermsOfUseModal } from './components/TermsOfUseModal';
+import { ContactModal } from './components/ContactModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AnalysisReport, ModuleType, ToneMode, WhatsAppParticipant, PromptCReport } from './types';
 
@@ -144,6 +147,9 @@ export default function App() {
   const [isCounting, setIsCounting] = useState<boolean>(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState<boolean>(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState<boolean>(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState<boolean>(false);
 
   const triggerCountAnimation = (targetCount: number) => {
     setIsCounting(true);
@@ -2550,13 +2556,55 @@ export default function App() {
       </main>
 
       {/* Trust & Policy Footer */}
-      <footer className="mt-12 text-center text-stone-400 text-[10px] space-y-2.5 px-4" id="app-footer">
-        <p>© 2026 Djoss Inc.</p>
-        <p>
-          Confidentialité garantie : Tes discussions WhatsApp ne sont jamais stockées sur nos serveurs à des fins marketing.
+      <footer className="mt-12 text-center text-stone-500 text-xs space-y-3 px-4 pb-8" id="app-footer">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-xs font-bold text-stone-600">
+          <button 
+            onClick={() => setIsPrivacyModalOpen(true)} 
+            className="hover:text-stone-900 transition-colors cursor-pointer"
+            id="link-privacy-policy"
+          >
+            🔒 Politique de Confidentialité
+          </button>
+          <span>•</span>
+          <button 
+            onClick={() => setIsTermsModalOpen(true)} 
+            className="hover:text-stone-900 transition-colors cursor-pointer"
+            id="link-terms-of-use"
+          >
+            📜 Conditions d'Utilisation
+          </button>
+          <span>•</span>
+          <button 
+            onClick={() => setIsContactModalOpen(true)} 
+            className="hover:text-stone-900 transition-colors cursor-pointer text-[#BE123C] hover:underline"
+            id="link-contact-us"
+          >
+            ✉️ Nous Contacter
+          </button>
+        </div>
+
+        <p className="text-[11px] text-stone-400 max-w-md mx-auto">
+          Confidentialité garantie : Vos discussions WhatsApp sont analysées localement et ne sont jamais conservées sur nos serveurs.
         </p>
 
+        <p className="text-[10px] text-stone-400 font-mono">© 2026 Djoss Inc. Tous droits réservés.</p>
       </footer>
+
+      {/* Footer Modals */}
+      <PrivacyPolicyModal 
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
+
+      <TermsOfUseModal 
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
+
+      <ContactModal 
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
 
     </div>
   );
