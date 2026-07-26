@@ -25,9 +25,9 @@ import { WhoTalksMost } from './components/WhoTalksMost';
 import { ReportResultView, MOCK_PROMPT_C_REPORT } from './components/ReportResultView';
 import { UnlockModal, UnlockOption } from './components/UnlockModal';
 import { VideoTutorialModal } from './components/VideoTutorialModal';
-import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
-import { TermsOfUseModal } from './components/TermsOfUseModal';
-import { ContactModal } from './components/ContactModal';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
+import { TermsOfUseView } from './components/TermsOfUseView';
+import { ContactView } from './components/ContactView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AnalysisReport, ModuleType, ToneMode, WhatsAppParticipant, PromptCReport } from './types';
 
@@ -93,10 +93,15 @@ function hasActiveSlugInUrl(): boolean {
 export default function App() {
   // Navigation & Screen State
   const [currentStep, setCurrentStep] = useState<
-    'landing' | 'wizard' | 'teaser' | 'payment' | 'report' | 'admin'
+    'landing' | 'wizard' | 'teaser' | 'payment' | 'report' | 'admin' | 'privacy' | 'terms' | 'contact'
   >(() => {
-    if (typeof window !== 'undefined' && (window.location.hash.includes('admin') || window.location.pathname.includes('admin'))) {
-      return 'admin';
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase();
+      const search = window.location.search.toLowerCase();
+      if (hash.includes('admin') || window.location.pathname.includes('admin')) return 'admin';
+      if (hash.includes('privacy') || search.includes('page=privacy')) return 'privacy';
+      if (hash.includes('terms') || search.includes('page=terms')) return 'terms';
+      if (hash.includes('contact') || search.includes('page=contact')) return 'contact';
     }
     return 'landing';
   });
@@ -106,7 +111,7 @@ export default function App() {
   const [projectSlug, setProjectSlug] = useState<string>(() => {
     const hash = window.location.hash;
     const match = hash.match(/#\/?(?:r\/)?([a-zA-Z0-9_-]+)/);
-    if (match && match[1] && !['landing', 'wizard', 'teaser', 'report', 'payment'].includes(match[1])) {
+    if (match && match[1] && !['landing', 'wizard', 'teaser', 'report', 'payment', 'admin', 'privacy', 'terms', 'contact'].includes(match[1].toLowerCase())) {
       return match[1];
     }
     const params = new URLSearchParams(window.location.search);
@@ -147,9 +152,6 @@ export default function App() {
   const [isCounting, setIsCounting] = useState<boolean>(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState<boolean>(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState<boolean>(false);
-  const [isTermsModalOpen, setIsTermsModalOpen] = useState<boolean>(false);
-  const [isContactModalOpen, setIsContactModalOpen] = useState<boolean>(false);
 
   const triggerCountAnimation = (targetCount: number) => {
     setIsCounting(true);
@@ -2534,6 +2536,21 @@ export default function App() {
           </div>
         )}
 
+        {/* ---------------------------------------------------- */}
+        {/* STANDALONE FOOTER PAGES */}
+        {/* ---------------------------------------------------- */}
+        {currentStep === 'privacy' && (
+          <PrivacyPolicyView onBack={() => { setCurrentStep('landing'); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        )}
+
+        {currentStep === 'terms' && (
+          <TermsOfUseView onBack={() => { setCurrentStep('landing'); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        )}
+
+        {currentStep === 'contact' && (
+          <ContactView onBack={() => { setCurrentStep('landing'); window.location.hash = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+        )}
+
         {/* Unlock Modal */}
         <UnlockModal 
           isOpen={isUnlockModalOpen}
@@ -2559,7 +2576,7 @@ export default function App() {
       <footer className="mt-12 text-center text-stone-500 text-xs space-y-3 px-4 pb-8" id="app-footer">
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-xs font-bold text-stone-600">
           <button 
-            onClick={() => setIsPrivacyModalOpen(true)} 
+            onClick={() => { setCurrentStep('privacy'); window.location.hash = 'privacy'; window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
             className="hover:text-stone-900 transition-colors cursor-pointer"
             id="link-privacy-policy"
           >
@@ -2567,7 +2584,7 @@ export default function App() {
           </button>
           <span>•</span>
           <button 
-            onClick={() => setIsTermsModalOpen(true)} 
+            onClick={() => { setCurrentStep('terms'); window.location.hash = 'terms'; window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
             className="hover:text-stone-900 transition-colors cursor-pointer"
             id="link-terms-of-use"
           >
@@ -2575,7 +2592,7 @@ export default function App() {
           </button>
           <span>•</span>
           <button 
-            onClick={() => setIsContactModalOpen(true)} 
+            onClick={() => { setCurrentStep('contact'); window.location.hash = 'contact'; window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
             className="hover:text-stone-900 transition-colors cursor-pointer text-[#BE123C] hover:underline"
             id="link-contact-us"
           >
@@ -2589,22 +2606,6 @@ export default function App() {
 
         <p className="text-[10px] text-stone-400 font-mono">© 2026 Djoss Inc. Tous droits réservés.</p>
       </footer>
-
-      {/* Footer Modals */}
-      <PrivacyPolicyModal 
-        isOpen={isPrivacyModalOpen}
-        onClose={() => setIsPrivacyModalOpen(false)}
-      />
-
-      <TermsOfUseModal 
-        isOpen={isTermsModalOpen}
-        onClose={() => setIsTermsModalOpen(false)}
-      />
-
-      <ContactModal 
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-      />
 
     </div>
   );
