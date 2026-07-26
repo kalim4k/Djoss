@@ -209,6 +209,7 @@ export default function App() {
   // Post-payment generation state (0 FCFA consumed before payment!)
   const [isGeneratingPostPayment, setIsGeneratingPostPayment] = useState<boolean>(false);
   const [postPaymentStep, setPostPaymentStep] = useState<number>(1);
+  const [step6Stage, setStep6Stage] = useState<number>(1);
 
   // Interactive Hero Mascot state
   const [heroMood, setHeroMood] = useState<'wise' | 'cool' | 'laughing' | 'thinking' | 'shocked'>('wise');
@@ -1209,13 +1210,23 @@ export default function App() {
     };
   }, []);
 
-  // Step 6: 100% Local processing animation (0 FCFA API calls consumed before payment!)
+  // Step 6: 100% Local 30-second processing animation (0 FCFA API calls consumed!)
   useEffect(() => {
     if (wizardStepIndex === 6 && rawFileContent) {
-      const timer = setTimeout(() => {
+      setStep6Stage(1);
+      const t1 = setTimeout(() => setStep6Stage(2), 7500);   // 7.5s
+      const t2 = setTimeout(() => setStep6Stage(3), 15000);  // 15s
+      const t3 = setTimeout(() => setStep6Stage(4), 22500);  // 22.5s
+      const t4 = setTimeout(() => {
         setWizardStepIndex(7);
-      }, 2500);
-      return () => clearTimeout(timer);
+      }, 30000); // 30s
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+        clearTimeout(t4);
+      };
     }
   }, [wizardStepIndex, rawFileContent]);
 
@@ -2258,18 +2269,22 @@ export default function App() {
                       </button>
                     </div>
                   ) : (
-                    <div className="max-w-xs mx-auto bg-stone-100 border border-stone-200 p-3 rounded-xl mt-4 text-left text-xs text-stone-600 font-medium space-y-1.5 animate-pulse">
-                      <div className="flex justify-between">
-                        <span>📂 Lecture du chat log...</span>
+                    <div className="max-w-xs mx-auto bg-stone-50 border border-stone-200/80 p-4 rounded-2xl mt-4 text-left text-xs text-stone-600 font-medium space-y-2.5 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <span>📂 Lecture & déchiffrement du chat...</span>
                         <span className="text-emerald-600 font-bold">OK</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>🕵️‍♂️ Extraction des expressions clés...</span>
-                        <span className="text-emerald-600 font-bold">OK</span>
+                      <div className="flex items-center justify-between">
+                        <span>🕵️‍♂️ Extraction des tics & prénoms...</span>
+                        {step6Stage >= 2 ? <span className="text-emerald-600 font-bold">OK</span> : <span className="text-amber-600 font-bold animate-pulse">En cours...</span>}
                       </div>
-                      <div className="flex justify-between">
-                        <span>📊 Calcul des temps de réponse moyens...</span>
-                        <span className="text-amber-600 font-bold">En cours...</span>
+                      <div className="flex items-center justify-between">
+                        <span>📊 Calcul des temps de réponse...</span>
+                        {step6Stage >= 3 ? <span className="text-emerald-600 font-bold">OK</span> : step6Stage >= 2 ? <span className="text-amber-600 font-bold animate-pulse">En cours...</span> : <span className="text-stone-400">En attente</span>}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>⚖️ Détection du rapport de force...</span>
+                        {step6Stage >= 4 ? <span className="text-emerald-600 font-bold">OK</span> : step6Stage >= 3 ? <span className="text-amber-600 font-bold animate-pulse">En cours...</span> : <span className="text-stone-400">En attente</span>}
                       </div>
                     </div>
                   )}
@@ -2351,238 +2366,26 @@ export default function App() {
               />
             )}
 
-            {/* STEP 9: RAPPORT SUMMARY & WHAT TO EXPECT */}
+            {/* STEP 9: RAPPORT READY (CLEAN & MINIMALIST) */}
             {wizardStepIndex === 9 && (
-              <div className="space-y-6 text-left" id="wizard-step-summary-teaser">
-                {/* Custom Minimalist Header */}
-                <div className="flex justify-between items-center text-sm font-semibold text-stone-500">
-                  <button 
-                    onClick={() => {
-                      if (selectedModule === 'friendzone') {
-                        setWizardStepIndex(85);
-                      } else {
-                        setWizardStepIndex(8);
-                      }
-                    }}
-                    className="flex items-center gap-1 hover:text-stone-950 transition-colors"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
-                  <span>9 sur 9</span>
+              <div className="bg-white p-8 sm:p-10 rounded-3xl border border-stone-200/80 text-center space-y-6 shadow-sm my-6 max-w-lg mx-auto animate-fade-in" id="wizard-step-summary-teaser">
+                <div className="relative inline-flex items-center justify-center">
+                  <MascotAvatar expression="cool" size={80} className="rounded-full ring-4 ring-rose-50 shadow-md" />
+                  <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1.5 rounded-full shadow-sm border-2 border-white">
+                    <Check className="w-4 h-4 stroke-[3]" />
+                  </span>
                 </div>
 
-                <div className="space-y-1 mt-4">
-                  <h3 className="font-serif font-black text-2xl text-stone-900 leading-tight">Rapport Classic</h3>
-                </div>
-
-                {/* Main Dynamic Card */}
-                <div className="bg-white p-4 rounded-3xl border border-stone-200/80 shadow-sm flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-stone-50 border border-stone-200/60 flex items-center justify-center text-stone-400 shrink-0 shadow-inner">
-                    <Image className="w-6 h-6 stroke-[1.5]" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <h4 className="font-bold text-stone-900 text-base leading-tight">
-                      {isGroupModule(selectedModule) 
-                        ? (parsedParticipants.length > 0 
-                            ? parsedParticipants.slice(0, 3).map(p => p.name).join(', ') + (parsedParticipants.length > 3 ? '...' : '')
-                            : `${confirmedMeName} & ses potes`)
-                        : `${confirmedMeName} ❤️ & ${confirmedPartnerName}`}
-                    </h4>
-                    <p className="text-xs text-stone-400 font-semibold tracking-wide">
-                      © What Djoss Thinks
-                    </p>
-                  </div>
-                </div>
-
-                {/* Section: Ce qui t'attend */}
-                <div className="space-y-4 pt-2">
-                  <h4 className="font-serif font-black text-xl text-stone-900 leading-tight">
-                    Ce qui t'attend
-                  </h4>
-
-                  <div className="space-y-4">
-                    {/* Item 1 */}
-                    <div className="flex gap-3.5 items-start">
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <Users className="w-5 h-5 stroke-[2]" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-sm text-stone-850">
-                          {isGroupModule(selectedModule) ? "Quel genre de groupe vous êtes" : "Quel genre de duo vous êtes"}
-                        </h5>
-                        <p className="text-xs text-stone-500 font-medium leading-relaxed">
-                          Pas ce que vous croyez. Ce que Djoss voit de l'extérieur.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Item 2 - Highlighted */}
-                    <div className="flex gap-3.5 items-start p-2.5 -mx-2.5 rounded-2xl bg-stone-100/75 border border-stone-205/40">
-                      <div className="w-10 h-10 rounded-xl bg-red-50 text-[#BE123C] flex items-center justify-center shrink-0">
-                        <Sparkles className="w-5 h-5 stroke-[2]" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-sm text-stone-850">
-                          Une analyse sans filtre de chacun de vous
-                        </h5>
-                        <p className="text-xs text-stone-500 font-medium leading-relaxed">
-                          Ce que Djoss admire, ce qui le questionne, ce qu'il ne peut pas ignorer.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Item 3 */}
-                    <div className="flex gap-3.5 items-start">
-                      <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                        <Award className="w-5 h-5 stroke-[2]" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-sm text-stone-850">
-                          Red flags. Green flags.
-                        </h5>
-                        <p className="text-xs text-stone-500 font-medium leading-relaxed">
-                          Ce qui fonctionne. Ce qui ne fonctionne pas.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Item 4 */}
-                    <div className="flex gap-3.5 items-start">
-                      <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                        <Info className="w-5 h-5 stroke-[2]" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-sm text-stone-850">
-                          Ce que personne n'ose vous dire
-                        </h5>
-                        <p className="text-xs text-stone-500 font-medium leading-relaxed">
-                          Ce que tout le monde voit chez vous, et que personne ne mentionne.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Item 5 */}
-                    <div className="flex gap-3.5 items-start">
-                      <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-                        <MessageSquare className="w-5 h-5 stroke-[2]" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-sm text-stone-850">
-                          Votre langage à vous
-                        </h5>
-                        <p className="text-xs text-stone-500 font-medium leading-relaxed">
-                          Les surnoms, les blagues qui reviennent, les mots qui n'ont de sens que pour vous — décortiqués.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Item 6 */}
-                    <div className="flex gap-3.5 items-start">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <span className="text-lg">🎁</span>
-                      </div>
-                      <div className="space-y-0.5">
-                        <h5 className="font-bold text-sm text-stone-850">
-                          Et tout ce que {totalMessages > 0 ? totalMessages.toLocaleString() : '1 047'} messages racontent sur vous sans le dire
-                        </h5>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Des réactions d'anthologie */}
-                <div className="space-y-3 pt-4">
-                  <h4 className="font-serif font-black text-xl text-stone-900 leading-tight">
-                    Des réactions d'anthologie
-                  </h4>
-
-                  <div className="flex overflow-x-auto gap-3 pb-3 -mx-4 px-4 scrollbar-none snap-x snap-mandatory">
-                    {/* Card 1 */}
-                    <div className="w-[160px] shrink-0 bg-emerald-50 border border-emerald-100/60 rounded-2xl p-3 flex flex-col justify-between text-left snap-start h-40">
-                      <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-100/50 px-2 py-0.5 rounded w-fit">
-                        Groupe 👥
-                      </span>
-                      <p className="text-xs font-medium text-stone-700 italic">
-                        "Tu as réagi à son invitation de mariage avec 🫡"
-                      </p>
-                      <span className="text-[10px] text-stone-400 font-semibold font-mono">
-                        MÉMOIRE DU GROUPE
-                      </span>
-                    </div>
-
-                    {/* Card 2 */}
-                    <div className="w-[160px] shrink-0 bg-blue-600 text-white rounded-2xl p-3 flex flex-col justify-between text-left snap-start h-40 shadow-sm">
-                      <span className="text-[10px] font-black uppercase bg-white/20 px-2 py-0.5 rounded w-fit text-white">
-                        Vibe 🔥
-                      </span>
-                      <p className="text-xs font-bold leading-snug">
-                        "Moussa répond en 4 secondes, toi en 4 heures."
-                      </p>
-                      <span className="text-[10px] text-white/70 font-semibold font-mono">
-                        RAPPORT DE FORCE
-                      </span>
-                    </div>
-
-                    {/* Card 3 */}
-                    <div className="w-[160px] shrink-0 bg-amber-50 border border-amber-100 rounded-2xl p-3 flex flex-col justify-between text-left snap-start h-40">
-                      <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-100/50 px-2 py-0.5 rounded w-fit">
-                        Alerte ⏰
-                      </span>
-                      <p className="text-xs font-medium text-stone-700 italic">
-                        "3 messages d'amour à 3h du matin sans réponse."
-                      </p>
-                      <span className="text-[10px] text-stone-400 font-semibold font-mono">
-                        LE DRAP TOTAL 💀
-                      </span>
-                    </div>
-
-                    {/* Card 4 */}
-                    <div className="w-[160px] shrink-0 bg-stone-900 text-white rounded-2xl p-3 flex flex-col justify-between text-left snap-start h-40">
-                      <span className="text-[10px] font-black uppercase bg-white/25 px-2 py-0.5 rounded w-fit text-red-300">
-                        SANS FILTRE ⚠️
-                      </span>
-                      <p className="text-xs font-medium leading-snug">
-                        "Qui est-ce qui a vraiment le contrôle ici ?"
-                      </p>
-                      <span className="text-[10px] text-stone-400 font-semibold font-mono">
-                        MANDATORY READING
-                      </span>
-                    </div>
-
-                    {/* Card 5 */}
-                    <div className="w-[160px] shrink-0 bg-purple-50 border border-purple-100 rounded-2xl p-3 flex flex-col justify-between text-left snap-start h-40">
-                      <span className="text-[10px] font-black uppercase text-purple-800 bg-purple-100/50 px-2 py-0.5 rounded w-fit">
-                        Langage 💬
-                      </span>
-                      <p className="text-xs font-medium text-stone-700 italic">
-                        "Le mot 'chou' répété 142 fois ce mois-ci."
-                      </p>
-                      <span className="text-[10px] text-stone-400 font-semibold font-mono">
-                        DÉCORTIQUÉ
-                      </span>
-                    </div>
-
-                    {/* Card 6 */}
-                    <div className="w-[160px] shrink-0 bg-rose-50 border border-rose-100 rounded-2xl p-3 flex flex-col justify-between text-left snap-start h-40">
-                      <span className="text-[10px] font-black uppercase text-rose-800 bg-rose-100/50 px-2 py-0.5 rounded w-fit">
-                        Verdict 💔
-                      </span>
-                      <p className="text-xs font-medium text-stone-700 italic">
-                        "Tu as 98% de chance d'être son confident éternel."
-                      </p>
-                      <span className="text-[10px] text-stone-400 font-semibold font-mono">
-                        FRIENDZONE INDEX
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-center text-[11px] text-stone-400 font-bold tracking-wide py-1">
-                    ⚡️ +93 618 rapports générés cette semaine
+                <div className="space-y-2">
+                  <h3 className="font-serif font-black text-2xl text-stone-900 leading-tight">
+                    Votre rapport est prêt à être lu
+                  </h3>
+                  <p className="text-xs sm:text-sm text-stone-500 font-medium leading-relaxed max-w-sm mx-auto">
+                    Toutes les vérités et analyses sur vos {totalMessages > 0 ? totalMessages.toLocaleString() : '1 480'} messages ont été préparées.
                   </p>
                 </div>
 
-                {/* Bottom Navigation Buttons */}
-                <div className="flex flex-col gap-3 pt-2">
+                <div className="pt-2">
                   <button 
                     onClick={() => {
                       const localTeaser = buildLocalTeaserReport(
@@ -2595,19 +2398,11 @@ export default function App() {
                       setPromptCReportData(localTeaser);
                       setCurrentStep('report');
                     }}
-                    className="w-full bg-[#1F1F1F] hover:bg-[#333333] text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                    className="w-full bg-[#111111] hover:bg-stone-850 active:scale-[0.98] text-white py-4 px-6 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-lg shadow-stone-900/10 transition-all cursor-pointer"
+                    id="btn-see-teaser-preview"
                   >
                     <span>Voir l'aperçu du rapport</span>
                     <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      setWizardStepIndex(8);
-                    }}
-                    className="w-full text-center py-2 text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
-                  >
-                    Retour à l'étape précédente
                   </button>
                 </div>
               </div>
