@@ -7,7 +7,7 @@ interface VideoTutorialModalProps {
   initialDevice?: 'android' | 'iphone';
 }
 
-export function VideoTutorialModal({ isOpen, onClose, initialDevice = 'iphone' }: VideoTutorialModalProps) {
+export function VideoTutorialModal({ isOpen, onClose, initialDevice = 'android' }: VideoTutorialModalProps) {
   const [activeDevice, setActiveDevice] = useState<'android' | 'iphone'>(initialDevice);
 
   if (!isOpen) return null;
@@ -54,20 +54,8 @@ export function VideoTutorialModal({ isOpen, onClose, initialDevice = 'iphone' }
           </button>
         </div>
 
-        {/* Device Switcher Tabs */}
+        {/* Device Switcher Tabs (Android First) */}
         <div className="grid grid-cols-2 gap-2 bg-stone-100 p-1.5 rounded-2xl border border-stone-200/60 text-xs font-bold">
-          <button
-            onClick={() => setActiveDevice('iphone')}
-            className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              activeDevice === 'iphone'
-                ? 'bg-white text-stone-950 shadow-sm font-black'
-                : 'text-stone-500 hover:text-stone-900 font-semibold'
-            }`}
-            id="tab-select-iphone"
-          >
-            <span>🍏 iPhone (iOS)</span>
-          </button>
-
           <button
             onClick={() => setActiveDevice('android')}
             className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
@@ -78,6 +66,18 @@ export function VideoTutorialModal({ isOpen, onClose, initialDevice = 'iphone' }
             id="tab-select-android"
           >
             <span>📱 Android</span>
+          </button>
+
+          <button
+            onClick={() => setActiveDevice('iphone')}
+            className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeDevice === 'iphone'
+                ? 'bg-white text-stone-950 shadow-sm font-black'
+                : 'text-stone-500 hover:text-stone-900 font-semibold'
+            }`}
+            id="tab-select-iphone"
+          >
+            <span>🍏 iPhone (iOS)</span>
           </button>
         </div>
 
