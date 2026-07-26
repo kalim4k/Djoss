@@ -4,7 +4,7 @@ import {
   Upload, ShieldCheck, Check, Lock, Music, Phone, Share2, 
   ArrowRight, Sparkles, Heart, Users, Volume2, Play, Pause, 
   Loader2, Info, Copy, ChevronRight, RefreshCw, AlertCircle, Award,
-  ArrowLeft, Pencil, MessageSquare, Image, ArrowDown, X
+  ArrowLeft, Pencil, MessageSquare, Image, ArrowDown, X, Video
 } from 'lucide-react';
 
 function SignalBars({ className = "w-4 h-4 text-emerald-600" }: { className?: string }) {
@@ -24,6 +24,7 @@ import { PerspectiveSelection } from './components/PerspectiveSelection';
 import { WhoTalksMost } from './components/WhoTalksMost';
 import { ReportResultView, MOCK_PROMPT_C_REPORT } from './components/ReportResultView';
 import { UnlockModal, UnlockOption } from './components/UnlockModal';
+import { VideoTutorialModal } from './components/VideoTutorialModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AnalysisReport, ModuleType, ToneMode, WhatsAppParticipant, PromptCReport } from './types';
 
@@ -142,6 +143,7 @@ export default function App() {
   const [fillProgress, setFillProgress] = useState<number>(0);
   const [isCounting, setIsCounting] = useState<boolean>(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState<boolean>(false);
 
   const triggerCountAnimation = (targetCount: number) => {
     setIsCounting(true);
@@ -2147,32 +2149,34 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Export instructions card */}
-                <div className="bg-white p-4 rounded-2xl border border-stone-200/80 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-stone-700 tracking-wider flex items-center gap-1.5">
-                    <Info className="w-4 h-4 text-amber-500" /> Comment exporter depuis WhatsApp ?
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="bg-stone-50 p-3 rounded-xl border border-stone-200/40">
-                      <p className="font-bold text-[#BE123C]">📱 Android :</p>
-                      <ol className="list-decimal pl-4 mt-1 space-y-1 text-stone-600 text-[11px]">
-                        <li>Ouvre la conversation</li>
-                        <li>Clique sur les 3 points</li>
-                        <li>Plus &gt; <strong>Exporter discussion</strong></li>
-                        <li>Choisis <strong>Sans Médias</strong></li>
-                      </ol>
+                {/* Video Tutorial Banner Card (Attention Grabbing) */}
+                <div className="bg-gradient-to-r from-rose-50/80 via-amber-50/50 to-stone-50 p-4 sm:p-5 rounded-2xl border border-rose-200/70 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-left my-2">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-[#BE123C] text-white shrink-0 mt-0.5 shadow-sm">
+                      <Video className="w-5 h-5" />
                     </div>
-                    <div className="bg-stone-50 p-3 rounded-xl border border-stone-200/40">
-                      <p className="font-bold text-[#BE123C]">🍏 iPhone :</p>
-                      <ol className="list-decimal pl-4 mt-1 space-y-1 text-stone-600 text-[11px]">
-                        <li>Ouvre la conversation</li>
-                        <li>Clique sur le nom en haut</li>
-                        <li>Fais défiler tout en bas</li>
-                        <li><strong>Exporter la discussion</strong></li>
-                        <li>Choisis <strong>Sans Médias</strong></li>
-                      </ol>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-xs sm:text-sm text-stone-900 flex items-center gap-2">
+                        <span>Tu ne sais pas comment exporter ta discussion ?</span>
+                        <span className="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                          Tuto 🎬
+                        </span>
+                      </h4>
+                      <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                        Clique ci-dessous pour voir la vidéo tutoriel pas-à-pas sur Android et iPhone.
+                      </p>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsVideoModalOpen(true)}
+                    className="w-full sm:w-auto shrink-0 bg-[#BE123C] hover:bg-[#9F0E31] text-white px-5 py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-rose-900/15 transition-all active:scale-95 cursor-pointer"
+                    id="btn-open-video-tuto"
+                  >
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>Voir le tuto vidéo</span>
+                  </button>
                 </div>
 
                 {/* Action button below */}
@@ -2535,6 +2539,12 @@ export default function App() {
             setIsUnlockModalOpen(false);
             await executePostPaymentGeneration();
           }}
+        />
+
+        {/* Video Tutorial Modal */}
+        <VideoTutorialModal 
+          isOpen={isVideoModalOpen}
+          onClose={() => setIsVideoModalOpen(false)}
         />
 
       </main>
