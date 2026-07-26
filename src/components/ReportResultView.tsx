@@ -121,54 +121,43 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      const fileList = Array.from(files).slice(0, 3);
-      const promises = fileList.map((file: File) => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-      });
-
-      Promise.all(promises).then(base64Photos => {
-        setUserPhotos(prev => {
-          const updated = [...prev, ...base64Photos].slice(0, 3);
-          if (report) {
-            report.photos = updated;
-            fetch('/api/projects', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                slug: report.id || 'current',
-                photos: updated,
-                promptCReport: report
-              })
-            }).catch(err => console.warn("Erreur sauvegarde photos dans la DB:", err));
-          }
-          return updated;
-        });
-      });
+    if (files && files[0]) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Photo = reader.result as string;
+        setUserPhotos([base64Photo]);
+        if (report) {
+          report.photos = [base64Photo];
+          fetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slug: report.id || 'current',
+              photos: [base64Photo],
+              promptCReport: report
+            })
+          }).catch(err => console.warn("Erreur sauvegarde photo dans la DB:", err));
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const removePhoto = (indexToRemove: number) => {
-    setUserPhotos(prev => {
-      const updated = prev.filter((_, idx) => idx !== indexToRemove);
-      if (report) {
-        report.photos = updated;
-        fetch('/api/projects', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            slug: report.id || 'current',
-            photos: updated,
-            promptCReport: report
-          })
-        }).catch(err => console.warn("Erreur suppression photo dans la DB:", err));
-      }
-      return updated;
-    });
+  const removePhoto = () => {
+    setUserPhotos([]);
+    if (report) {
+      report.photos = [];
+      fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: report.id || 'current',
+          photos: [],
+          promptCReport: report
+        })
+      }).catch(err => console.warn("Erreur suppression photo dans la DB:", err));
+    }
   };
 
   // Immediate audio generation as soon as report is unlocked
@@ -319,52 +308,41 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
         </span>
       </div>
 
-      {/* Photo Personalization Container (Natural aspect ratio, 1 to 3 max) */}
-      <div className="border-2 border-dashed border-stone-200/90 hover:border-amber-300 transition-all rounded-3xl p-6 text-center bg-stone-50/50 shadow-xs relative my-6">
+      {/* Single Photo Personalization Container */}
+      <div className="my-6">
         {userPhotos.length > 0 ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap justify-center items-center gap-4">
-              {userPhotos.map((photo, idx) => (
-                <div key={idx} className="relative group max-w-full rounded-2xl overflow-hidden border-2 border-white shadow-md transition-transform hover:scale-[1.02] bg-stone-950/5">
-                  <img src={photo} alt={`Photo ${idx + 1}`} className="max-h-72 w-auto object-contain rounded-2xl" />
-                  <button 
-                    onClick={() => removePhoto(idx)}
-                    className="absolute top-2 right-2 bg-stone-900/85 hover:bg-black text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity shadow-md"
-                    title="Supprimer la photo"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2">
-              {userPhotos.length < 3 && (
-                <label className="cursor-pointer bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-2">
-                  <span>Ajouter une photo ({userPhotos.length}/3 max)</span>
-                  <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
-                </label>
-              )}
-              <span className="text-[11px] font-bold text-stone-500">
-                {userPhotos.length} / 3 photo{userPhotos.length > 1 ? 's' : ''} ajoutée{userPhotos.length > 1 ? 's' : ''}
-              </span>
+          <div className="flex justify-center items-center">
+            <div className="relative group max-w-full rounded-3xl overflow-hidden border-2 border-white shadow-md transition-all hover:shadow-lg bg-stone-950/5">
+              <img 
+                src={userPhotos[0]} 
+                alt="Photo d'illustration du rapport" 
+                className="max-h-80 w-auto object-contain rounded-3xl" 
+              />
+              <button 
+                onClick={removePhoto}
+                className="absolute top-3 right-3 bg-stone-900/80 hover:bg-black text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-md cursor-pointer"
+                title="Supprimer la photo"
+                aria-label="Supprimer la photo"
+              >
+                ×
+              </button>
             </div>
           </div>
         ) : (
-          <label className="cursor-pointer flex flex-col items-center justify-center space-y-3 group py-2">
-            <div className="flex -space-x-3 overflow-hidden py-1">
-              <img className="inline-block h-12 w-12 rounded-2xl ring-2 ring-white object-cover shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Exemple 1" />
-              <img className="inline-block h-12 w-12 rounded-2xl ring-2 ring-white object-cover shadow-sm" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" alt="Exemple 2" />
-              <img className="inline-block h-12 w-12 rounded-2xl ring-2 ring-white object-cover shadow-sm" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80" alt="Exemple 3" />
-            </div>
-            <div className="font-bold text-xs text-stone-700 group-hover:text-stone-900 transition-colors flex items-center gap-1.5">
-              <span>Ajouter une ou plusieurs photos (3 max)</span>
-            </div>
-            <p className="text-[11px] text-stone-500 font-medium">
-              Glisse ou clique pour ajouter de 1 à 3 photos. Elles s'adapteront dans leur format réel.
-            </p>
-            <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
-          </label>
+          <div className="border-2 border-dashed border-stone-200/90 hover:border-amber-300 transition-all rounded-3xl p-6 text-center bg-stone-50/50 shadow-xs relative">
+            <label className="cursor-pointer flex flex-col items-center justify-center space-y-3 group py-2">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 shadow-xs group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5 fill-amber-400" />
+              </div>
+              <div className="font-bold text-xs text-stone-700 group-hover:text-stone-900 transition-colors">
+                <span>Ajouter une photo au rapport</span>
+              </div>
+              <p className="text-[11px] text-stone-500 font-medium">
+                Clique pour importer une image (elle s'adaptera dans son format réel)
+              </p>
+              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          </div>
         )}
       </div>
 
