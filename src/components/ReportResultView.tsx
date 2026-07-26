@@ -263,8 +263,8 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
         </div>
       </div>
 
-      {/* Action Buttons: Listen Audio + Share */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      {/* Action Buttons: Listen Audio + Share (Black & Centered) */}
+      <div className="flex flex-col items-center justify-center gap-3 w-full my-2">
         <button
           onClick={() => {
             if (isUnlocked) {
@@ -273,7 +273,7 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
               onUnlockClick();
             }
           }}
-          className="flex-1 bg-[#BE123C] hover:bg-[#9F0E31] text-white px-5 py-3 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          className="w-full max-w-sm bg-[#111111] hover:bg-stone-850 text-white px-6 py-3.5 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98] cursor-pointer"
           id="btn-listen-report-audio"
         >
           <Volume2 className="w-4 h-4 text-amber-300" />
@@ -285,7 +285,7 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
 
         <button 
           onClick={handleShare}
-          className="px-5 py-3 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 font-bold text-xs text-stone-700 flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+          className="w-full max-w-sm px-5 py-3 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 font-bold text-xs text-stone-700 flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
           id="btn-share-report"
         >
           {copied ? (
@@ -311,7 +311,6 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
         reportData={report}
       />
 
-
       {/* Confidentiality Banner */}
       <div className="bg-stone-100/90 border border-stone-200/60 rounded-2xl p-3.5 text-xs text-stone-600 flex items-center gap-2.5 shadow-xs text-left">
         <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -320,17 +319,17 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
         </span>
       </div>
 
-      {/* Photo Personalization Container (Matching Brandon screenshot style - 3 photos max) */}
+      {/* Photo Personalization Container (Natural aspect ratio, 1 to 3 max) */}
       <div className="border-2 border-dashed border-stone-200/90 hover:border-amber-300 transition-all rounded-3xl p-6 text-center bg-stone-50/50 shadow-xs relative my-6">
         {userPhotos.length > 0 ? (
           <div className="space-y-4">
-            <div className="flex justify-center items-center gap-3.5">
+            <div className="flex flex-wrap justify-center items-center gap-4">
               {userPhotos.map((photo, idx) => (
-                <div key={idx} className="relative group w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border-2 border-white shadow-md transition-transform hover:scale-105">
-                  <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                <div key={idx} className="relative group max-w-full rounded-2xl overflow-hidden border-2 border-white shadow-md transition-transform hover:scale-[1.02] bg-stone-950/5">
+                  <img src={photo} alt={`Photo ${idx + 1}`} className="max-h-72 w-auto object-contain rounded-2xl" />
                   <button 
                     onClick={() => removePhoto(idx)}
-                    className="absolute top-1 right-1 bg-stone-900/80 hover:bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                    className="absolute top-2 right-2 bg-stone-900/85 hover:bg-black text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold opacity-80 group-hover:opacity-100 transition-opacity shadow-md"
                     title="Supprimer la photo"
                   >
                     ×
@@ -339,10 +338,10 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
               ))}
             </div>
             
-            <div className="flex justify-center items-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2">
               {userPhotos.length < 3 && (
-                <label className="cursor-pointer bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs inline-flex items-center gap-2">
-                  <span>Ajouter des photos ({userPhotos.length}/3)</span>
+                <label className="cursor-pointer bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center gap-2">
+                  <span>Ajouter une photo ({userPhotos.length}/3 max)</span>
                   <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
                 </label>
               )}
@@ -359,10 +358,10 @@ export function ReportResultView({ report, onUnlockClick, onBack }: ReportResult
               <img className="inline-block h-12 w-12 rounded-2xl ring-2 ring-white object-cover shadow-sm" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80" alt="Exemple 3" />
             </div>
             <div className="font-bold text-xs text-stone-700 group-hover:text-stone-900 transition-colors flex items-center gap-1.5">
-              <span>Ajoute des photos (3 max)</span>
+              <span>Ajouter une ou plusieurs photos (3 max)</span>
             </div>
             <p className="text-[11px] text-stone-500 font-medium">
-              Glisse ou clique pour ajouter jusqu'à 3 photos pour immortaliser ce rapport
+              Glisse ou clique pour ajouter de 1 à 3 photos. Elles s'adapteront dans leur format réel.
             </p>
             <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
           </label>
