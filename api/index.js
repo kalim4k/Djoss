@@ -152,16 +152,16 @@ function readPaymentsDb() {
 }
 function savePaymentTx(token, txData) {
   try {
-    const db = readPaymentsDb();
-    db[token] = { ...db[token], ...txData };
-    fs.writeFileSync(PAYMENTS_PATH, JSON.stringify(db, null, 2), "utf8");
+    const db2 = readPaymentsDb();
+    db2[token] = { ...db2[token], ...txData };
+    fs.writeFileSync(PAYMENTS_PATH, JSON.stringify(db2, null, 2), "utf8");
   } catch (e) {
     console.error("Error writing payments database:", e);
   }
 }
 function getPaymentTx(token) {
-  const db = readPaymentsDb();
-  return db[token] || null;
+  const db2 = readPaymentsDb();
+  return db2[token] || null;
 }
 var CONTACT_MESSAGES_PATH = path.join(DATA_DIR, "contact_messages.json");
 function readContactMessagesDb() {
@@ -183,22 +183,26 @@ function writeContactMessagesDb(messages) {
 }
 async function getProjectFromDb(slug) {
   const localDb = readDb();
-  if (localDb[slug]) {
-    return localDb[slug];
-  }
+  let project = localDb[slug] || null;
   if (supabase) {
     try {
       const { data, error } = await supabase.from("djoss_projects").select("data").eq("slug", slug).single();
       if (data && data.data) {
-        localDb[slug] = data.data;
+        project = { ...project, ...data.data };
+        const isUnlocked = Boolean(
+          project.isUnlocked || project.report?.isUnlocked || project.promptCReport?.isUnlocked
+        );
+        project.isUnlocked = isUnlocked;
+        if (project.report) project.report.isUnlocked = isUnlocked;
+        if (project.promptCReport) project.promptCReport.isUnlocked = isUnlocked;
+        localDb[slug] = project;
         writeDb(localDb);
-        return data.data;
       }
     } catch (e) {
       console.warn(`[Djoss Server] Erreur lors de la lecture Supabase pour slug ${slug}:`, e);
     }
   }
-  return null;
+  return project;
 }
 async function saveProjectToDb(slug, projectData) {
   const localDb = readDb();
@@ -944,9 +948,9 @@ Le JSON doit poss\xE9der EXACTEMENT cette structure :
         console.warn(`[Djoss Server] genererRapport failed, teaser-only mode:`, genErr?.message);
       }
     }
-    const db = readDb();
-    db[reportId] = finalReport;
-    writeDb(db);
+    const db2 = readDb();
+    db2[reportId] = finalReport;
+    writeDb(db2);
     await saveProjectToDb(reportId, finalReport);
     res.json({ reportId, teaser: finalReport, promptCReport });
   } catch (error) {
@@ -954,26 +958,26 @@ Le JSON doit poss\xE9der EXACTEMENT cette structure :
     res.status(500).json({ error: error.message || "L'analyse par Djoss a \xE9chou\xE9." });
   }
 });
-app.get("/api/report/:id", (req, res) => {
+app.get("/api/report/:id", async (req, res) => {
   const { id } = req.params;
-  const db = readDb();
-  const report = db[id];
-  if (!report) {
+  const project = await getProjectFromDb(id);
+  if (!project) {
     return res.status(404).json({ error: "Rapport introuvable." });
   }
-  if (!report.isUnlocked) {
+  const report = project.promptCReport || project.report || project;
+  if (!project.isUnlocked && !report.isUnlocked && report.insights) {
     const maskedReport = {
       ...report,
-      insights: report.insights.map((ins) => ({
+      insights: (report.insights || []).map((ins) => ({
         ...ins,
         content: ins.isTeaser ? ins.content : "---PAY\xC9 POUR D\xC9BLOQUER---"
       })),
-      errors: report.errors.map((err, idx) => ({
+      errors: (report.errors || []).map((err, idx) => ({
         ...err,
         text: idx === 0 ? err.text : "---PAY\xC9 POUR D\xC9BLOQUER---",
         correction: idx === 0 ? err.correction : "---PAY\xC9 POUR D\xC9BLOQUER---"
       })),
-      timeline: report.timeline.map((evt, idx) => ({
+      timeline: (report.timeline || []).map((evt, idx) => ({
         ...evt,
         description: idx === 0 ? evt.description : "---PAY\xC9 POUR D\xC9BLOQUER---"
       })),
@@ -983,16 +987,16 @@ app.get("/api/report/:id", (req, res) => {
   }
   res.json(report);
 });
-app.post("/api/report/:id/update-names", (req, res) => {
+app.post("/api/report/:id/update-names", async (req, res) => {
   const { id } = req.params;
   const { meName, partnerName } = req.body;
-  const db = readDb();
-  const report = db[id];
-  if (!report) {
+  const project = await getProjectFromDb(id);
+  if (!project) {
     return res.status(404).json({ error: "Rapport introuvable." });
   }
-  const oldMeName = report.meName;
-  const oldPartnerName = report.partnerName;
+  const report = project.promptCReport || project.report || project;
+  const oldMeName = report.meName || project.meName;
+  const oldPartnerName = report.partnerName || project.partnerName;
   const replaceNames = (text) => {
     if (!text) return text;
     let newText = text;
@@ -1008,9 +1012,9 @@ app.post("/api/report/:id/update-names", (req, res) => {
     }
     return newText;
   };
-  report.verdict = replaceNames(report.verdict);
-  report.summary = replaceNames(report.summary);
-  report.advice = replaceNames(report.advice);
+  if (report.verdict) report.verdict = replaceNames(report.verdict);
+  if (report.summary) report.summary = replaceNames(report.summary);
+  if (report.advice) report.advice = replaceNames(report.advice);
   if (report.insights) {
     report.insights = report.insights.map((ins) => ({
       ...ins,
@@ -1043,15 +1047,15 @@ app.post("/api/pay", (req, res) => {
   if (!reportId || !phone || !provider || !offer) {
     return res.status(400).json({ error: "Champs de paiement requis manquants." });
   }
-  const db = readDb();
-  const report = db[reportId];
+  const db2 = readDb();
+  const report = db2[reportId];
   if (!report) {
     return res.status(404).json({ error: "Rapport introuvable pour ce paiement." });
   }
   report.isUnlocked = true;
   report.selectedOffer = offer;
-  db[reportId] = report;
-  writeDb(db);
+  db2[reportId] = report;
+  writeDb(db2);
   saveProjectToDb(reportId, report).catch(() => {
   });
   res.json({ success: true, message: "Paiement valid\xE9 avec succ\xE8s !", report });
@@ -1226,6 +1230,27 @@ app.get("/api/payments/moneyfusion/check/:token", async (req, res) => {
     res.status(500).json({ error: "Erreur serveur lors de la v\xE9rification" });
   }
 });
+app.post("/api/projects", async (req, res) => {
+  try {
+    const projectData = req.body || {};
+    const slug = projectData.slug || projectData.reportId || projectData.report?.id || projectData.promptCReport?.id;
+    if (!slug) {
+      return res.status(400).json({ error: "Slug/Code de projet requis." });
+    }
+    const existing = await getProjectFromDb(slug) || {};
+    const updatedProject = {
+      ...existing,
+      ...projectData,
+      slug,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await saveProjectToDb(slug, updatedProject);
+    res.json({ success: true, slug, project: updatedProject });
+  } catch (err) {
+    console.error("[Djoss Server] Erreur enregistrement projet:", err);
+    res.status(500).json({ error: "Erreur serveur lors de la sauvegarde du projet." });
+  }
+});
 app.get("/api/projects/:slug", async (req, res) => {
   const { slug } = req.params;
   const project = await getProjectFromDb(slug);
@@ -1236,8 +1261,8 @@ app.get("/api/projects/:slug", async (req, res) => {
 });
 app.get("/api/admin/stats", async (req, res) => {
   try {
-    const db = readDb();
-    const projectsMap = { ...db };
+    const db2 = readDb();
+    const projectsMap = { ...db2 };
     if (supabase) {
       try {
         const { data } = await supabase.from("djoss_projects").select("slug, data");
@@ -1439,9 +1464,9 @@ app.delete("/api/admin/contact-messages/:id", async (req, res) => {
 });
 app.delete("/api/admin/projects/:slug", async (req, res) => {
   const { slug } = req.params;
-  const db = readDb();
-  delete db[slug];
-  writeDb(db);
+  const db2 = readDb();
+  delete db2[slug];
+  writeDb(db2);
   if (supabase) {
     try {
       await supabase.from("djoss_projects").delete().eq("slug", slug);
@@ -1555,15 +1580,15 @@ async function synthesizeElevenLabs(script) {
 }
 app.get("/api/generate-audio/:id", async (req, res) => {
   const { id } = req.params;
-  const db = readDb();
+  const db2 = readDb();
   let reportKey = id;
-  if (!db[reportKey] && id === "current") {
-    const keys = Object.keys(db);
+  if (!db2[reportKey] && id === "current") {
+    const keys = Object.keys(db2);
     if (keys.length > 0) {
       reportKey = keys[keys.length - 1];
     }
   }
-  let report = db[reportKey];
+  let report = db2[reportKey];
   if (!report) {
     const fallbackScript = `[laughs] Ah on dit quoi ! C'est Djoss en personne. J'ai scann\xE9 toute la discussion et c'est la magie ! Tu envoies des pav\xE9s de 50 lignes pour recevoir un 'ok' en retour. [scoffs] Le goumin frappe \xE0 ta porte et tu lui ouvres en grand ! Prends ton drap en douce et dis le gb\xEA. On est ensemble !`;
     return res.json({ useWebSpeech: true, script: fallbackScript });
@@ -1576,16 +1601,16 @@ app.get("/api/generate-audio/:id", async (req, res) => {
   if (!audioScript) {
     audioScript = await genererScriptAudio(report);
     report.audioScript = audioScript;
-    db[reportKey] = report;
-    writeDb(db);
+    db2[reportKey] = report;
+    writeDb(db2);
     saveProjectToDb(reportKey, report).catch(() => {
     });
   }
   const elevenLabsAudio = await synthesizeElevenLabs(audioScript);
   if (elevenLabsAudio) {
     report.audioBase64 = elevenLabsAudio;
-    db[reportKey] = report;
-    writeDb(db);
+    db2[reportKey] = report;
+    writeDb(db2);
     saveProjectToDb(reportKey, report).catch(() => {
     });
     return res.json({ audioBase64: elevenLabsAudio, script: audioScript });
@@ -1609,8 +1634,8 @@ app.get("/api/generate-audio/:id", async (req, res) => {
       const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
       if (base64Audio) {
         report.audioBase64 = base64Audio;
-        db[reportKey] = report;
-        writeDb(db);
+        db2[reportKey] = report;
+        writeDb(db2);
         saveProjectToDb(reportKey, report).catch(() => {
         });
         return res.json({ audioBase64: base64Audio, script: audioScript });

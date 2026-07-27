@@ -122,9 +122,7 @@ function writeContactMessagesDb(messages: any[]) {
 // Supabase + Local DB persistence wrappers
 async function getProjectFromDb(slug: string): Promise<any> {
   const localDb = readDb();
-  if (localDb[slug]) {
-    return localDb[slug];
-  }
+  let project = localDb[slug] || null;
 
   if (supabase) {
     try {
@@ -135,16 +133,25 @@ async function getProjectFromDb(slug: string): Promise<any> {
         .single();
 
       if (data && data.data) {
-        localDb[slug] = data.data;
+        project = { ...project, ...data.data };
+        const isUnlocked = Boolean(
+          project.isUnlocked ||
+          project.report?.isUnlocked ||
+          project.promptCReport?.isUnlocked
+        );
+        project.isUnlocked = isUnlocked;
+        if (project.report) project.report.isUnlocked = isUnlocked;
+        if (project.promptCReport) project.promptCReport.isUnlocked = isUnlocked;
+
+        localDb[slug] = project;
         writeDb(localDb);
-        return data.data;
       }
     } catch (e) {
       console.warn(`[Djoss Server] Erreur lors de la lecture Supabase pour slug ${slug}:`, e);
     }
   }
 
-  return null;
+  return project;
 }
 
 async function saveProjectToDb(slug: string, projectData: any): Promise<void> {
@@ -1772,29 +1779,30 @@ Le JSON doit posséder EXACTEMENT cette structure :
 });
 
 // API: Get Report by ID (Teaser if locked, Full if unlocked)
-app.get('/api/report/:id', (req, res) => {
+app.get('/api/report/:id', async (req, res) => {
   const { id } = req.params;
-  const db = readDb();
-  const report = db[id];
+  const project = await getProjectFromDb(id);
 
-  if (!report) {
+  if (!project) {
     return res.status(404).json({ error: "Rapport introuvable." });
   }
 
+  const report = project.promptCReport || project.report || project;
+
   // If locked, filter non-teaser insights/elements to maintain real paywall integrity
-  if (!report.isUnlocked) {
+  if (!project.isUnlocked && !report.isUnlocked && report.insights) {
     const maskedReport = {
       ...report,
-      insights: report.insights.map((ins: any) => ({
+      insights: (report.insights || []).map((ins: any) => ({
         ...ins,
         content: ins.isTeaser ? ins.content : "---PAYÉ POUR DÉBLOQUER---"
       })),
-      errors: report.errors.map((err: any, idx: number) => ({
+      errors: (report.errors || []).map((err: any, idx: number) => ({
         ...err,
         text: idx === 0 ? err.text : "---PAYÉ POUR DÉBLOQUER---",
         correction: idx === 0 ? err.correction : "---PAYÉ POUR DÉBLOQUER---"
       })),
-      timeline: report.timeline.map((evt: any, idx: number) => ({
+      timeline: (report.timeline || []).map((evt: any, idx: number) => ({
         ...evt,
         description: idx === 0 ? evt.description : "---PAYÉ POUR DÉBLOQUER---"
       })),
@@ -1807,19 +1815,19 @@ app.get('/api/report/:id', (req, res) => {
 });
 
 // API: Update Report Participant Names (Anonymization)
-app.post('/api/report/:id/update-names', (req, res) => {
+app.post('/api/report/:id/update-names', async (req, res) => {
   const { id } = req.params;
   const { meName, partnerName } = req.body;
 
-  const db = readDb();
-  const report = db[id];
+  const project = await getProjectFromDb(id);
 
-  if (!report) {
+  if (!project) {
     return res.status(404).json({ error: "Rapport introuvable." });
   }
 
-  const oldMeName = report.meName;
-  const oldPartnerName = report.partnerName;
+  const report = project.promptCReport || project.report || project;
+  const oldMeName = report.meName || project.meName;
+  const oldPartnerName = report.partnerName || project.partnerName;
 
   const replaceNames = (text: string) => {
     if (!text) return text;
@@ -1837,9 +1845,9 @@ app.post('/api/report/:id/update-names', (req, res) => {
     return newText;
   };
 
-  report.verdict = replaceNames(report.verdict);
-  report.summary = replaceNames(report.summary);
-  report.advice = replaceNames(report.advice);
+  if (report.verdict) report.verdict = replaceNames(report.verdict);
+  if (report.summary) report.summary = replaceNames(report.summary);
+  if (report.advice) report.advice = replaceNames(report.advice);
 
   if (report.insights) {
     report.insights = report.insights.map((ins: any) => ({
@@ -2099,6 +2107,32 @@ app.get('/api/payments/moneyfusion/check/:token', async (req, res) => {
   } catch (err: any) {
     console.error('[MoneyFusion Check] Erreur lors de la vérification:', err);
     res.status(500).json({ error: "Erreur serveur lors de la vérification" });
+  }
+});
+
+// API: Save or Update Project State & Report
+app.post('/api/projects', async (req, res) => {
+  try {
+    const projectData = req.body || {};
+    const slug = projectData.slug || projectData.reportId || projectData.report?.id || projectData.promptCReport?.id;
+
+    if (!slug) {
+      return res.status(400).json({ error: "Slug/Code de projet requis." });
+    }
+
+    const existing = (await getProjectFromDb(slug)) || {};
+    const updatedProject = {
+      ...existing,
+      ...projectData,
+      slug,
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveProjectToDb(slug, updatedProject);
+    res.json({ success: true, slug, project: updatedProject });
+  } catch (err: any) {
+    console.error("[Djoss Server] Erreur enregistrement projet:", err);
+    res.status(500).json({ error: "Erreur serveur lors de la sauvegarde du projet." });
   }
 });
 
