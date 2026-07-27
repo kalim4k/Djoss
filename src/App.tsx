@@ -1459,42 +1459,40 @@ export default function App() {
               </div>
 
               {/* Main Stacked Headline with High-Contrast Italic/Bold mix */}
-              <div className="space-y-1 sm:space-y-2 max-w-2xl mx-auto">
-                <h2 className="text-3xl sm:text-5xl md:text-6xl tracking-tight text-stone-950 font-sans leading-[1.12] text-center font-black">
-                  <div className="flex items-center justify-center gap-2 sm:gap-3 flex-nowrap">
-                    <span className="font-serif italic font-normal text-stone-900">Analyse</span>
-                    <span className="font-extrabold text-stone-950 whitespace-nowrap">ton chat.</span>
+              <div className="space-y-2 max-w-2xl mx-auto">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl tracking-tight text-stone-950 font-sans leading-[1.18] text-center font-black">
+                  <span>Est-ce qu'il/elle t'aime ou tu te fais gérer ?</span>
+                  <div className="mt-2 text-2xl sm:text-3xl md:text-4xl font-serif italic text-[#BE123C]">
+                    Djoss te dit la vérité.
                   </div>
-                  <div className="flex items-center justify-center gap-2 sm:gap-3 flex-nowrap">
-                    <span className="font-serif italic font-normal text-stone-900">Décode</span>
-                    <span className="font-extrabold text-stone-950 whitespace-nowrap">tes non-dits.</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 sm:gap-3 flex-nowrap">
-                    <span className="font-serif italic font-normal text-[#BE123C]">Révèle</span>
-                    <span className="font-extrabold text-stone-950 whitespace-nowrap">la vérité.</span>
-                  </div>
-                </h2>
+                </h1>
               </div>
 
               {/* Sub-headline */}
-              <p className="text-stone-600 text-sm md:text-base max-w-lg mx-auto leading-relaxed font-normal">
-                Djoss décortique tes conversations WhatsApp. Révélations cash sans filtre, analyse des sous-entendus et rapport audio sur-mesure. <strong className="text-stone-900">Démarre gratuitement en 1 clic.</strong>
+              <p className="text-stone-600 text-sm md:text-base max-w-lg mx-auto leading-relaxed font-medium">
+                Analyse tes conversations WhatsApp en 1 clic. Révélations cash sans filtre, décodage des non-dits et verdict instantané.
               </p>
 
-              {/* CTA Row with Glowing Button */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              {/* CTA Row with Glowing Button & Price Tag (Visible without scrolling) */}
+              <div className="pt-2 flex flex-col items-center justify-center gap-3">
                 <div className="relative group w-full sm:w-auto">
-                  {/* Subtle dark aura glow */}
+                  {/* Subtle aura glow */}
                   <div className="absolute -inset-1 bg-gradient-to-r from-stone-800 to-black rounded-full blur-md opacity-35 group-hover:opacity-75 transition duration-300 pointer-events-none"></div>
                   
                   <button
                     onClick={handleStartNewAnalysis}
-                    className="relative w-full sm:w-auto bg-black hover:bg-stone-900 text-white py-4 px-8 rounded-full font-bold flex items-center justify-center gap-2.5 shadow-xl text-base transition-all duration-200 cursor-pointer"
+                    className="relative w-full sm:w-auto bg-[#111111] hover:bg-stone-900 text-white py-4 px-8 rounded-full font-black flex items-center justify-center gap-2.5 shadow-xl text-base sm:text-lg transition-all duration-200 cursor-pointer active:scale-95"
                     id="cta-start-btn"
                   >
-                    <span>Démarrer gratuitement</span>
-                    <ArrowRight className="w-5 h-5 text-stone-300 group-hover:translate-x-1 transition-transform" />
+                    <span>Obtenir mon verdict , 800 FCFA</span>
+                    <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
                   </button>
+                </div>
+
+                {/* Price promo callout (Visible without scrolling) */}
+                <div className="inline-flex items-center gap-1.5 bg-amber-100/90 text-amber-900 border border-amber-300/80 px-4 py-1.5 rounded-full text-xs font-black shadow-xs tracking-wide">
+                  <span>🔥 Prix promo : 800 FCFA</span>
+                  <span className="text-[10px] text-amber-800 font-bold">• Rapport complet instantané</span>
                 </div>
               </div>
 
@@ -1629,61 +1627,89 @@ export default function App() {
               </div>
             </div>
 
-            {/* NEW SECTION: THREE WAYS TO BE READ (inspired by Brandon) */}
-            <div className="space-y-4 pt-4 border-t border-stone-200/60">
+            {/* LES MODULES DJOSS */}
+            <div className="space-y-4 pt-4 border-t border-stone-200/60" id="landing-modules-section">
               <h3 className="font-serif font-black text-xl text-stone-900 text-center">
-                Trois façons de te faire lire
+                Choisissez votre type d'analyse
               </h3>
               <div className="space-y-3">
-                {/* Classic Report Card */}
-                <div className="bg-white p-4 rounded-2xl border border-stone-200/80 flex gap-4 items-start hover:border-stone-300 transition-all">
-                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0 text-amber-600 font-bold flex items-center justify-center">
-                    1
+                {/* Module 1: Friendzone */}
+                <div 
+                  onClick={() => {
+                    setSelectedModule('friendzone');
+                    setCurrentStep('wizard');
+                    setWizardStepIndex(1);
+                  }}
+                  className="bg-white p-4 rounded-2xl border border-stone-200/80 flex gap-4 items-center hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                    🔥
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-black text-stone-900 text-sm">Classic Report</h4>
-                    <p className="text-xs text-stone-600 leading-relaxed">
-                      Drôle, vif, et celui par lequel tout le monde commence. Djoss lit une conversation et dit ce que tout le monde pense.
+                  <div className="space-y-0.5 text-left">
+                    <h4 className="font-black text-stone-900 text-base flex items-center gap-1.5">
+                      <span>Friendzone</span>
+                    </h4>
+                    <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                      Est-ce qu'il/elle t'aime vraiment ou tu sers de backup ?
                     </p>
                   </div>
                 </div>
 
-                {/* Deep Report Card */}
-                <div className="bg-white p-4 rounded-2xl border border-stone-200/80 flex gap-4 items-start hover:border-stone-300 transition-all">
-                  <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0 text-rose-600 font-bold flex items-center justify-center">
-                    2
+                {/* Module 2: Couple */}
+                <div 
+                  onClick={() => {
+                    setSelectedModule('couple');
+                    setCurrentStep('wizard');
+                    setWizardStepIndex(1);
+                  }}
+                  className="bg-white p-4 rounded-2xl border border-stone-200/80 flex gap-4 items-center hover:border-rose-400 hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                    💑
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-black text-stone-900 text-sm">Deep Report</h4>
-                    <p className="text-xs text-stone-600 leading-relaxed">
-                      Plus profond, plus calme, plus honnête. Djoss lit la conversation de près et nomme ce qui se passe dessous.
+                  <div className="space-y-0.5 text-left">
+                    <h4 className="font-black text-stone-900 text-base flex items-center gap-1.5">
+                      <span>Couple</span>
+                    </h4>
+                    <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                      Ton couple va bien ou vous jouez la comédie ?
                     </p>
                   </div>
                 </div>
 
-                {/* The Mirror Card */}
-                <div className="bg-white p-4 rounded-2xl border border-stone-200/80 flex gap-4 items-start hover:border-stone-300 transition-all">
-                  <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0 text-purple-600 font-bold flex items-center justify-center">
-                    3
+                {/* Module 3: Groupe */}
+                <div 
+                  onClick={() => {
+                    setSelectedModule('group');
+                    setCurrentStep('wizard');
+                    setWizardStepIndex(1);
+                  }}
+                  className="bg-white p-4 rounded-2xl border border-stone-200/80 flex gap-4 items-center hover:border-purple-400 hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                    👥
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="font-black text-stone-900 text-sm">The Mirror</h4>
-                    <p className="text-xs text-stone-600 leading-relaxed">
-                      Pas sur une conversation. Sur toi. Envoie plusieurs conversations et vois les schémas que Djoss retrouve.
+                  <div className="space-y-0.5 text-left">
+                    <h4 className="font-black text-stone-900 text-base flex items-center gap-1.5">
+                      <span>Groupe</span>
+                    </h4>
+                    <p className="text-xs text-stone-600 font-medium leading-relaxed">
+                      Qui parle trop, qui est toxique, qui s'en fout de toi ?
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Secondary CTA to trigger try/essayer */}
+              {/* Action Button */}
               <button
                 onClick={() => {
                   setCurrentStep('wizard');
                   setWizardStepIndex(1);
                 }}
-                className="w-full bg-stone-900 hover:bg-stone-800 text-white py-3 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-sm cursor-pointer"
+                className="w-full bg-[#111111] hover:bg-stone-850 text-white py-3.5 px-6 rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm cursor-pointer shadow-md"
               >
-                Essayer <ArrowRight className="w-4 h-4" />
+                <span>Obtenir mon verdict , 800 FCFA</span>
+                <ArrowRight className="w-4 h-4 text-amber-400" />
               </button>
             </div>
 
@@ -1836,7 +1862,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Option 1: Friendzone ou pas Friendzone */}
+                  {/* Option 1: Friendzone */}
                   <button 
                     onClick={() => setSelectedModule('friendzone')}
                     className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-4 ${
@@ -1845,16 +1871,16 @@ export default function App() {
                         : 'border-stone-200/80 bg-white hover:border-stone-300'
                     }`}
                   >
-                    <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center text-xl shrink-0">
-                      🎯
+                    <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-xl shrink-0">
+                      🔥
                     </div>
                     <div className="text-left">
-                      <h4 className="font-bold text-stone-900 text-sm">Friendzone ou pas Friendzone</h4>
-                      <p className="text-xs text-stone-500 font-medium mt-0.5">Djoss va analyser la discussion pour définir si tu es dans la friendzone ou pas et si tu as tes chances chez la go.</p>
+                      <h4 className="font-bold text-stone-900 text-sm">Friendzone</h4>
+                      <p className="text-xs text-stone-500 font-medium mt-0.5">Est-ce qu'il/elle t'aime vraiment ou tu sers de backup ?</p>
                     </div>
                   </button>
 
-                  {/* Option 2: Partenaire / crush / amis */}
+                  {/* Option 2: Couple */}
                   <button 
                     onClick={() => setSelectedModule('couple')}
                     className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-4 ${
@@ -1864,15 +1890,15 @@ export default function App() {
                     }`}
                   >
                     <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center text-xl shrink-0">
-                      💌
+                      💑
                     </div>
                     <div className="text-left">
-                      <h4 className="font-bold text-stone-900 text-sm">Partenaire / crush / amis</h4>
-                      <p className="text-xs text-stone-500 font-medium mt-0.5">Djoss peut analyser tous ces types de discussions en duo (copain, copine, crush, ex, ami(e)...).</p>
+                      <h4 className="font-bold text-stone-900 text-sm">Couple</h4>
+                      <p className="text-xs text-stone-500 font-medium mt-0.5">Ton couple va bien ou vous jouez la comédie ?</p>
                     </div>
                   </button>
 
-                  {/* Option 3: Groupe de potes / famille / travail */}
+                  {/* Option 3: Groupe */}
                   <button 
                     onClick={() => setSelectedModule('group')}
                     className={`w-full p-4 rounded-2xl border transition-all flex items-center gap-4 ${
@@ -1881,12 +1907,12 @@ export default function App() {
                         : 'border-stone-200/80 bg-white hover:border-stone-300'
                     }`}
                   >
-                    <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-xl shrink-0">
+                    <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-xl shrink-0">
                       👥
                     </div>
                     <div className="text-left">
-                      <h4 className="font-bold text-stone-900 text-sm">Groupe de potes / famille / travail</h4>
-                      <p className="text-xs text-stone-500 font-medium mt-0.5">Djoss peut analyser tous ces types de groupes et s'adapter pour donner un rapport propre et pertinent.</p>
+                      <h4 className="font-bold text-stone-900 text-sm">Groupe</h4>
+                      <p className="text-xs text-stone-500 font-medium mt-0.5">Qui parle trop, qui est toxique, qui s'en fout de toi ?</p>
                     </div>
                   </button>
                 </div>
