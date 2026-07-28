@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Play, Pause, RotateCcw, Volume2, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, PhoneOff, Mic, MicOff, RefreshCw, AlertCircle, Sparkles, X } from 'lucide-react';
 import { MascotAvatar } from './MascotAvatar';
 
 interface AudioPlayerModalProps {
@@ -19,23 +19,35 @@ export function AudioPlayerModal({
 }: AudioPlayerModalProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [audioScriptText, setAudioScriptText] = useState<string>('');
+  const [callDuration, setCallDuration] = useState<number>(0);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // DJOSS Mascot Official Profile Image
+  const djossProfileImg = "https://ysbiedwkakdqadxtuwab.supabase.co/storage/v1/object/public/uploads/0bc4684d-8d4b-4583-984a-4a17512a1ad7.png";
 
   useEffect(() => {
     if (!isOpen) {
-      // Pause audio when modal is closed (keep src cached for fast replay)
       if (audioRef.current) {
         audioRef.current.pause();
       }
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.pause();
+        window.speechSynthesis.cancel();
       }
       setIsPlaying(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setCallDuration(0);
       return;
     }
+
+    // Call duration timer
+    timerRef.current = setInterval(() => {
+      setCallDuration(prev => prev + 1);
+    }, 1000);
 
     // Play cached audio if already loaded
     if (audioRef.current && audioRef.current.src && audioRef.current.src.length > 50) {
@@ -47,7 +59,6 @@ export function AudioPlayerModal({
       return;
     }
 
-    // Otherwise load or fetch audio
     loadAudio();
 
     return () => {
@@ -57,6 +68,7 @@ export function AudioPlayerModal({
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isOpen, reportId]);
 
@@ -89,7 +101,6 @@ export function AudioPlayerModal({
     }
 
     try {
-      // Call backend to fetch or generate audio
       const res = await fetch(`/api/generate-audio/${reportId || 'current'}`);
       
       if (!res.ok) {
@@ -118,7 +129,6 @@ export function AudioPlayerModal({
           startWebSpeechFallback(data.script);
         };
 
-        // Auto-play as per spec
         try {
           await audioRef.current.play();
           setIsPlaying(true);
@@ -127,7 +137,6 @@ export function AudioPlayerModal({
           setIsPlaying(false);
         }
       } else if (data.useWebSpeech) {
-        // Fallback Web Speech synthesis
         startWebSpeechFallback(data.script || buildDefaultFallbackScript());
       }
     } catch (err: any) {
@@ -141,7 +150,6 @@ export function AudioPlayerModal({
   };
 
   const buildDefaultFallbackScript = () => {
-    const p1 = reportData?.meName || "toi";
     const title = reportTitle || reportData?.titre || "Analyse Djoss";
     const verdict = reportData?.verdict ? `Verdict : ${reportData?.verdict}.` : "";
     return `Ah on dit quoi ! C'est Djoss en personne. J'ai scanné toute votre discussion et c'est la magie ! ${title}. ${verdict} Tu envoies des pavés de 50 lignes pour recevoir un 'ok' en retour. Le goumin frappe à ta porte et tu lui ouvres en grand ! Prends ton drap en douce et dis le gbê. On est ensemble !`;
@@ -154,8 +162,6 @@ export function AudioPlayerModal({
     }
 
     window.speechSynthesis.cancel();
-    
-    // Clean audio tags like [laughs], [sarcastically] for browser speech synthesis
     const cleanText = text.replace(/\[.*?\]/g, '').trim();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -191,120 +197,161 @@ export function AudioPlayerModal({
     }
   };
 
-  const rewind10Seconds = () => {
-    if (audioRef.current && audioRef.current.src) {
-      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
-    } else if ('speechSynthesis' in window) {
-      // For web speech, restart synthesis
-      window.speechSynthesis.cancel();
-      startWebSpeechFallback(audioScriptText || buildDefaultFallbackScript());
+  const toggleMute = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
     }
+  };
+
+  const formatTime = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainingSecs.toString().padStart(2, '0')}`;
   };
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-stone-900/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
-      onClick={onClose}
-      id="audio-player-modal-backdrop"
+      className="fixed inset-0 z-50 bg-gradient-to-b from-[#a3c5f5] via-[#c6dbf8] to-[#97bbed] flex flex-col justify-between p-6 sm:p-10 select-none animate-in fade-in duration-300"
+      id="djoss-call-screen"
     >
-      <div 
-        className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-stone-200/80 relative text-center space-y-5 animate-in zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
-        id="audio-player-modal-content"
-      >
-        {/* Close Button */}
+      {/* Top Header / Live Call Info */}
+      <div className="flex items-center justify-between w-full max-w-4xl mx-auto pt-2">
+        <div className="flex items-center gap-2.5 bg-white/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/40 shadow-xs">
+          <span className={`w-2.5 h-2.5 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+          <span className="text-xs sm:text-sm font-black text-stone-900 tracking-wide">
+            {isLoading ? "Connexion à Djoss..." : isPlaying ? `En appel avec Djoss (${formatTime(callDuration)})` : "Appel en pause"}
+          </span>
+        </div>
+
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
-          aria-label="Fermer"
-          id="audio-modal-close-btn"
+          className="p-3 rounded-full bg-white/40 hover:bg-white/70 backdrop-blur-md text-stone-800 transition-all cursor-pointer border border-white/40 shadow-xs"
+          title="Fermer l'appel"
+          id="btn-close-call"
         >
           <X className="w-5 h-5" />
         </button>
+      </div>
 
-        {/* Mascot Avatar Header */}
-        <div className="flex flex-col items-center pt-2 space-y-2">
-          <div className="relative">
-            <MascotAvatar expression="cool" size={88} className="shadow-md rounded-full bg-amber-50 p-1 border-2 border-amber-300" />
-            <div className="absolute -bottom-1 -right-1 bg-[#BE123C] text-white p-1.5 rounded-full border-2 border-white shadow-xs">
-              <Volume2 className="w-4 h-4" />
-            </div>
+      {/* Main Center Avatar Section (Exactly like Call UI) */}
+      <div className="flex flex-col items-center justify-center my-auto relative space-y-6">
+        
+        {/* Animated Sound Waves / Ripples when playing */}
+        {isPlaying && (
+          <>
+            <div className="absolute w-56 h-56 sm:w-72 sm:h-72 rounded-full bg-white/25 animate-ping pointer-events-none -z-10" />
+            <div className="absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-white/15 animate-pulse pointer-events-none -z-10" />
+          </>
+        )}
+
+        {/* Profile Picture in Center */}
+        <div className="relative group">
+          <div className="w-36 h-36 sm:w-48 sm:h-48 rounded-full border-4 border-white/90 shadow-2xl overflow-hidden bg-amber-50 flex items-center justify-center transition-transform duration-300">
+            <img 
+              src={djossProfileImg} 
+              alt="Djoss Profile"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Fallback to MascotAvatar if img fails
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+            <MascotAvatar expression="cool" size={160} className="w-full h-full" />
           </div>
 
-          <div className="space-y-1">
-            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#BE123C] bg-red-50 px-2.5 py-0.5 rounded-md border border-red-200/60">
-              <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" /> Le Vocal Exclusif
-            </span>
-            <h3 className="font-serif font-black text-xl text-stone-900">
-              Rapport Audio de Djoss
-            </h3>
-            <p className="text-xs text-stone-500 font-medium px-4 line-clamp-2">
-              {reportTitle || reportData?.titre || "Le résumé cash & viral sans filtre"}
-            </p>
-          </div>
-        </div>
-
-        {/* Audio Player Controls */}
-        <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200/80 space-y-4">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-4 space-y-2 text-stone-500">
-              <RefreshCw className="w-6 h-6 animate-spin text-[#BE123C]" />
-              <span className="text-xs font-bold">Préparation de l'audio de Djoss...</span>
+          {/* Audio Playing Badge */}
+          {isPlaying && (
+            <div className="absolute bottom-2 right-2 bg-emerald-500 text-white p-2 rounded-full border-2 border-white shadow-md animate-bounce">
+              <Sparkles className="w-4 h-4 fill-white" />
             </div>
-          ) : audioError ? (
-            <div className="flex flex-col items-center py-3 text-red-600 space-y-2">
-              <AlertCircle className="w-6 h-6" />
-              <span className="text-xs font-semibold">{audioError}</span>
-              <button 
-                onClick={loadAudio}
-                className="text-xs font-bold underline hover:text-red-800"
-              >
-                Réessayer
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Audio Minimal Controls */}
-              <div className="flex items-center justify-center gap-6 py-2">
-                {/* Rewind 10s Button */}
-                <button
-                  onClick={rewind10Seconds}
-                  className="p-3 rounded-full bg-white text-stone-700 hover:text-stone-900 hover:bg-stone-100 border border-stone-200 shadow-xs transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                  title="Reculer de 10 secondes"
-                  id="btn-audio-rewind-10"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </button>
-
-                {/* Main Play / Pause Button */}
-                <button
-                  onClick={togglePlayPause}
-                  className="w-16 h-16 rounded-full bg-[#BE123C] hover:bg-[#9F0E31] text-white shadow-lg transition-all active:scale-95 flex items-center justify-center cursor-pointer"
-                  title={isPlaying ? "Mettre en pause" : "Écouter"}
-                  id="btn-audio-play-pause"
-                >
-                  {isPlaying ? (
-                    <Pause className="w-7 h-7 fill-white" />
-                  ) : (
-                    <Play className="w-7 h-7 fill-white ml-1" />
-                  )}
-                </button>
-              </div>
-
-              {/* Status Indicator */}
-              <div className="text-[11px] font-bold text-stone-500 flex items-center justify-center gap-1.5 pt-1">
-                <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-stone-300'}`} />
-                <span>{isPlaying ? "En cours de lecture..." : "Appuie sur play pour écouter"}</span>
-              </div>
-            </>
           )}
         </div>
 
-        <p className="text-[10px] text-stone-400 font-medium italic">
-          💡 Format vocal viral généré par l'IA de Djoss L'Analyste
-        </p>
+        {/* Title or Loading Info */}
+        <div className="text-center space-y-1 max-w-sm px-4">
+          <h2 className="font-serif font-black text-xl sm:text-2xl text-stone-900 drop-shadow-xs">
+            Djoss L'Analyste
+          </h2>
+          <p className="text-xs sm:text-sm text-stone-700 font-semibold line-clamp-1">
+            {isLoading ? "Préparation du rapport vocal..." : reportTitle || reportData?.titre || "Rapport Audio Exclusif"}
+          </p>
+        </div>
+
+        {/* Loading Spinner / Error Banner */}
+        {isLoading && (
+          <div className="flex items-center gap-2 bg-white/50 backdrop-blur-md px-4 py-2 rounded-full border border-white/40 text-stone-800 text-xs font-bold animate-pulse">
+            <RefreshCw className="w-4 h-4 animate-spin text-[#BE123C]" />
+            <span>Djoss est en train de parler...</span>
+          </div>
+        )}
+
+        {audioError && (
+          <div className="flex items-center gap-2 bg-red-100 text-red-900 px-4 py-2 rounded-2xl border border-red-200 text-xs font-bold">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{audioError}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Row: Name Overlay (Left) & Call Control Bar (Center) */}
+      <div className="w-full max-w-4xl mx-auto flex items-end justify-between relative pb-2 sm:pb-4">
+        
+        {/* Bottom Left Name Tag (Exact match to screenshot) */}
+        <div 
+          className="bg-slate-900/60 backdrop-blur-md text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-2xl border border-white/20 shadow-lg flex items-center gap-2"
+          id="caller-name-tag"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Djoss</span>
+        </div>
+
+        {/* Bottom Center Call Control Bar */}
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 flex items-center justify-center gap-3 sm:gap-4">
+          
+          {/* Mute / Audio Toggle Button */}
+          <button
+            onClick={toggleMute}
+            className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl shadow-lg flex items-center justify-center transition-all cursor-pointer border border-white/40 active:scale-95 ${
+              isMuted 
+                ? 'bg-amber-500 text-white' 
+                : 'bg-white/90 hover:bg-white text-stone-800'
+            }`}
+            title={isMuted ? "Réactiver le son" : "Couper le son"}
+            id="btn-call-mute"
+          >
+            {isMuted ? <VolumeX className="w-5 h-5 sm:w-6 sm:h-6" /> : <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />}
+          </button>
+
+          {/* Main Play / Pause Button (Strictly Pause/Play, No Rewind) */}
+          <button
+            onClick={togglePlayPause}
+            disabled={isLoading}
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white hover:bg-stone-50 text-stone-900 shadow-2xl flex items-center justify-center transition-transform cursor-pointer border border-white active:scale-95 disabled:opacity-50"
+            title={isPlaying ? "Mettre en pause" : "Reprendre l'appel"}
+            id="btn-call-play-pause"
+          >
+            {isPlaying ? (
+              <Pause className="w-7 h-7 sm:w-8 sm:h-8 text-stone-900 fill-stone-900" />
+            ) : (
+              <Play className="w-7 h-7 sm:w-8 sm:h-8 text-stone-900 fill-stone-900 ml-1" />
+            )}
+          </button>
+
+          {/* End Call / Raccrocher Button */}
+          <button
+            onClick={onClose}
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#BE123C] hover:bg-rose-800 text-white shadow-lg flex items-center justify-center transition-transform cursor-pointer active:scale-95"
+            title="Raccrocher l'appel"
+            id="btn-call-end"
+          >
+            <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6 fill-white" />
+          </button>
+        </div>
+
       </div>
     </div>
   );
