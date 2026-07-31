@@ -24,6 +24,15 @@ import {
 } from 'lucide-react';
 import { MascotAvatar } from './MascotAvatar';
 
+interface FunnelStep {
+  step: number;
+  name: string;
+  reached: number;
+  reachedPct: number;
+  dropOff: number;
+  dropOffPct: number;
+}
+
 interface AdminStats {
   totalProjects: number;
   totalReports: number;
@@ -34,6 +43,7 @@ interface AdminStats {
   moduleBreakdown: Record<string, number>;
   toneBreakdown: Record<string, number>;
   providerBreakdown: Record<string, number>;
+  funnelStats?: FunnelStep[];
 }
 
 interface ProjectSummary {
@@ -612,6 +622,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onGoHome, onOpen
             </div>
 
           </div>
+
+          {/* Funnel & Drop-off Analysis */}
+          {stats.funnelStats && stats.funnelStats.length > 0 && (
+            <div className="bg-stone-900 border border-stone-800/80 rounded-3xl p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <TrendingUp className="w-5 h-5 text-indigo-400" />
+                  <h2 className="font-extrabold text-base text-white">Analyse de l'Entonnoir & Abandons par Étape</h2>
+                </div>
+                <span className="text-xs text-stone-500 font-mono">Suivi du parcours utilisateur</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stats.funnelStats.map((step, idx) => {
+                  const isLast = step.step === 10;
+                  return (
+                    <div key={idx} className="bg-stone-950 p-4 rounded-2xl border border-stone-800/40 flex flex-col justify-between gap-3 hover:border-stone-800/80 transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold font-mono flex items-center justify-center border border-indigo-500/20 shrink-0">
+                              {step.step}
+                            </span>
+                            <span className="font-bold text-xs text-stone-200 line-clamp-1">{step.name}</span>
+                          </div>
+                          <p className="text-[11px] text-stone-400">
+                            Ayant atteint cette étape : <span className="font-mono text-stone-100 font-bold">{step.reached}</span> ({step.reachedPct}%)
+                          </p>
+                        </div>
+                        {isLast ? (
+                          <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            Succès
+                          </span>
+                        ) : (
+                          <div className="text-right">
+                            <span className="text-stone-500 text-[9px] uppercase tracking-wider block">Abandons</span>
+                            <span className="font-mono font-bold text-rose-400 text-xs">{step.dropOff} ({step.dropOffPct}%)</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="w-full h-1.5 bg-stone-900 rounded-full overflow-hidden border border-stone-800">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isLast ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-indigo-500 to-violet-400'
+                          }`}
+                          style={{ width: `${step.reachedPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
         {/* Projects Data Table Header & Controls */}
         <div className="bg-stone-900 border border-stone-800/80 rounded-3xl p-6 space-y-6">

@@ -2245,6 +2245,65 @@ app.get('/api/admin/stats', async (req, res) => {
       };
     });
 
+    // Funnel & Drop-off tracking calculation
+    const stepNames = [
+      "", // 0-indexed unused
+      "Choix du dialecte (Étape 1)",
+      "Choix du combat / module (Étape 2)",
+      "Description de l'histoire / contexte (Étape 3)",
+      "Choix du tempérament (Étape 4)",
+      "Import du chat WhatsApp (Étape 5)",
+      "Attente de l'analyse (Étape 6)",
+      "Confirmation des prénoms (Étape 7)",
+      "Lecture du teaser / verdict gratuit (Étape 8)",
+      "Écran de paiement (Étape 9)",
+      "Rapport débloqué / Succès (Étape 10)"
+    ];
+
+    const stepCounts = Array(11).fill(0);
+    allProjectsList.forEach((proj: any) => {
+      let stepNum = 1;
+      const isUnlocked = !!(proj.report?.isUnlocked || proj.promptCReport?.isUnlocked || proj.isUnlocked);
+      
+      if (isUnlocked || proj.currentStep === 'report') {
+        stepNum = 10;
+      } else if (proj.currentStep === 'payment' || proj.wizardStepIndex === 9) {
+        stepNum = 9;
+      } else if (proj.currentStep === 'teaser' || proj.wizardStepIndex === 8) {
+        stepNum = 8;
+      } else if (proj.currentStep === 'wizard') {
+        const ws = Number(proj.wizardStepIndex) || 1;
+        if (ws >= 1 && ws <= 7) {
+          stepNum = ws;
+        } else if (ws === 8) {
+          stepNum = 8;
+        } else if (ws >= 9) {
+          stepNum = 9;
+        }
+      }
+      stepCounts[stepNum]++;
+    });
+
+    const funnelStats = [];
+    for (let i = 1; i <= 10; i++) {
+      let reached = 0;
+      for (let j = i; j <= 10; j++) {
+        reached += stepCounts[j];
+      }
+      const dropOff = i === 10 ? 0 : stepCounts[i];
+      const reachedPct = totalProjects > 0 ? Math.round((reached / totalProjects) * 100) : 0;
+      const dropOffPct = reached > 0 ? Math.round((dropOff / reached) * 100) : 0;
+      
+      funnelStats.push({
+        step: i,
+        name: stepNames[i],
+        reached,
+        reachedPct,
+        dropOff,
+        dropOffPct
+      });
+    }
+
     // Sort by most recent
     projectSummaries.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
@@ -2259,7 +2318,8 @@ app.get('/api/admin/stats', async (req, res) => {
         estimatedRevenueFCFA,
         moduleBreakdown,
         toneBreakdown,
-        providerBreakdown
+        providerBreakdown,
+        funnelStats
       },
       projects: projectSummaries
     });

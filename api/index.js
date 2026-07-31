@@ -1340,6 +1340,60 @@ app.get("/api/admin/stats", async (req, res) => {
         scoreLabel: proj.report?.scoreLabel || "Score"
       };
     });
+    const stepNames = [
+      "",
+      // 0-indexed unused
+      "Choix du dialecte (\xC9tape 1)",
+      "Choix du combat / module (\xC9tape 2)",
+      "Description de l'histoire / contexte (\xC9tape 3)",
+      "Choix du temp\xE9rament (\xC9tape 4)",
+      "Import du chat WhatsApp (\xC9tape 5)",
+      "Attente de l'analyse (\xC9tape 6)",
+      "Confirmation des pr\xE9noms (\xC9tape 7)",
+      "Lecture du teaser / verdict gratuit (\xC9tape 8)",
+      "\xC9cran de paiement (\xC9tape 9)",
+      "Rapport d\xE9bloqu\xE9 / Succ\xE8s (\xC9tape 10)"
+    ];
+    const stepCounts = Array(11).fill(0);
+    allProjectsList.forEach((proj) => {
+      let stepNum = 1;
+      const isUnlocked = !!(proj.report?.isUnlocked || proj.promptCReport?.isUnlocked || proj.isUnlocked);
+      if (isUnlocked || proj.currentStep === "report") {
+        stepNum = 10;
+      } else if (proj.currentStep === "payment" || proj.wizardStepIndex === 9) {
+        stepNum = 9;
+      } else if (proj.currentStep === "teaser" || proj.wizardStepIndex === 8) {
+        stepNum = 8;
+      } else if (proj.currentStep === "wizard") {
+        const ws = Number(proj.wizardStepIndex) || 1;
+        if (ws >= 1 && ws <= 7) {
+          stepNum = ws;
+        } else if (ws === 8) {
+          stepNum = 8;
+        } else if (ws >= 9) {
+          stepNum = 9;
+        }
+      }
+      stepCounts[stepNum]++;
+    });
+    const funnelStats = [];
+    for (let i = 1; i <= 10; i++) {
+      let reached = 0;
+      for (let j = i; j <= 10; j++) {
+        reached += stepCounts[j];
+      }
+      const dropOff = i === 10 ? 0 : stepCounts[i];
+      const reachedPct = totalProjects > 0 ? Math.round(reached / totalProjects * 100) : 0;
+      const dropOffPct = reached > 0 ? Math.round(dropOff / reached * 100) : 0;
+      funnelStats.push({
+        step: i,
+        name: stepNames[i],
+        reached,
+        reachedPct,
+        dropOff,
+        dropOffPct
+      });
+    }
     projectSummaries.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     res.json({
       success: true,
@@ -1352,7 +1406,8 @@ app.get("/api/admin/stats", async (req, res) => {
         estimatedRevenueFCFA,
         moduleBreakdown,
         toneBreakdown,
-        providerBreakdown
+        providerBreakdown,
+        funnelStats
       },
       projects: projectSummaries
     });

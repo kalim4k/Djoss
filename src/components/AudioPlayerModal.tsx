@@ -276,9 +276,6 @@ export function AudioPlayerModal({
           <h2 className="font-serif font-black text-xl sm:text-2xl text-stone-900 drop-shadow-xs">
             Djoss L'Analyste
           </h2>
-          <p className="text-xs sm:text-sm text-stone-700 font-semibold line-clamp-1">
-            {isLoading ? "Préparation du rapport vocal..." : reportTitle || reportData?.titre || "Rapport Audio Exclusif"}
-          </p>
         </div>
 
         {/* Loading Spinner / Error Banner */}
